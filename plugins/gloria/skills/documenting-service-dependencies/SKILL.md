@@ -24,7 +24,21 @@ Generate **all four by default**. Cross-link them (each inventory links to its h
 
 ## Classification Rule (the most important step)
 
-This single decision determines which file every system lands in.
+This decides which file every system lands in — but first apply the **inclusion gate**: most false positives come from inventorying things the app never actually calls.
+
+### Inclusion gate — does it count at all?
+
+Only inventory a service the application makes a **live outbound network connection to at runtime** — an actual request the app sends (or, for infrastructure, a live connection/binding it reads or writes). Require **evidence of a call**, not merely a dependency in the manifest: a base URL that is fetched, an SDK/client that is instantiated **and invoked**, a DSN/connection that is opened.
+
+Do **not** inventory:
+
+- **Libraries used purely locally** — signature verification, parsing, schema/codegen, crypto, formatting. A vendor's package in `package.json` / `go.mod` is **not** evidence of an outbound connection. _Example: a webhook library like **Svix** used only to **verify** an inbound webhook's signature — the app never calls `svix.com`, so Svix is **not** a dependency. The webhook **sender** (e.g. Clerk) is, if the app calls it elsewhere._
+- **Inbound-only relationships** — if a third party calls **you** (an inbound webhook/callback) and you never call **them**, they are not an outbound dependency. Note the inbound event under a sender you do call, but don't list a service you only receive from.
+- **Transitive / vendored code** the app never reaches over the network itself.
+
+When in doubt, **trace the call** to where the URL is actually requested or the client method actually invoked. No outbound call found → it does not belong in the inventory; say so rather than listing it.
+
+### External vs. internal
 
 - **External SaaS** = hosted on a **different domain than the application**, with a **publicly addressable URL** (e.g. `api.github.com`, `slack.com`, `api.openai.com`).
 - **Internal** = anything reached via `localhost`, a **private IP** (10./172.16./192.168.), a **link-local** address (169.254.), an **internal-only AWS endpoint** (Bedrock internal URLs, ECS task metadata), the application's **own services**, OR an **infrastructure component** regardless of address — **databases, caches, search engines, message queues, LLM gateways**.
@@ -33,11 +47,12 @@ When a managed cloud has both faces, split it: a public console/API URL → exte
 
 ## Process
 
-1. **Find services.** Search the codebase for: SDK/client imports, base-URL constants, OAuth/webhook handlers, env vars that look like endpoints or credentials (`*_URL`, `*_BASE_URL`, `*_API_KEY`, `*_TOKEN`, `*_DSN`), `docker-compose`/IaC files, and config loaders. Use parallel search agents for breadth.
-2. **For each service, capture:** purpose (how the app uses it), the **exact URL(s)/host(s)** the app calls, the **auth mechanism** and the **env var(s)** that hold credentials and config, and whether it's runtime vs. CI/dev-only.
-3. **Classify** each per the rule above.
-4. **Write the two inventory docs**, then the two health-check docs (one probe per service, in the same section order as its inventory).
-5. Report what you found and any classification calls you made.
+1. **Find candidates.** Search the codebase for: SDK/client imports, base-URL constants, OAuth/webhook handlers, env vars that look like endpoints or credentials (`*_URL`, `*_BASE_URL`, `*_API_KEY`, `*_TOKEN`, `*_DSN`), `docker-compose`/IaC files, and config loaders. Use parallel search agents for breadth.
+2. **Apply the inclusion gate.** For each candidate, confirm the app makes a **live outbound call** to it (trace to the actual request/client invocation). Drop locally-used libraries and inbound-only senders — an import is not a call.
+3. **For each surviving service, capture:** purpose (how the app uses it), the **exact URL(s)/host(s)** the app calls, the **auth mechanism** and the **env var(s)** that hold credentials and config, and whether it's runtime vs. CI/dev-only.
+4. **Classify** each per the rule above.
+5. **Write the two inventory docs**, then the two health-check docs (one probe per service, in the same section order as its inventory).
+6. Report what you found and any classification calls you made — including candidates you **excluded** by the inclusion gate (e.g. local-only libraries) and why.
 
 ## Inventory Document Structure
 
@@ -95,6 +110,7 @@ gloria.dev runs a remote **MCP server** that lets a coding agent push the invent
 | `get_dependency`     | `{ orgSlug, projectSlug, slug }`                                 | Return one dependency's full detail.                           | `inventory:read`  |
 | `put_dependency`     | `{ orgSlug, projectSlug, dependency }`                          | Upsert one dependency by slug. Project must already exist.      | `inventory:write` |
 | `delete_dependency`  | `{ orgSlug, projectSlug, slug }`                                 | Remove a dependency by slug. Idempotent (missing = success).    | `inventory:write` |
+| `put_document`       | `{ orgSlug, projectSlug, document }`                            | Upsert a Markdown doc by name. Project must already exist.      | `inventory:write` |
 
 ### Payload shapes
 
@@ -126,25 +142,35 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 `details` is **strict** — unknown fields are rejected, not ignored. The schema deliberately has **no slot for auth mechanism / credential env vars** (beyond an internal system's `addressEnv` name), **no runtime-vs-CI flag**, and **no health-check commands**. Keep that richer detail in the Markdown docs; don't try to smuggle it into `details`.
 
+`document` (for `put_document`):
+
+```jsonc
+{ "name": "EXTERNAL_SAAS", "markdown": "# External SaaS\n…" } // name = file basename WITHOUT `.md`
+```
+
+`name` is a single safe path segment (alphanumeric ends, inner `.`/`_`/`-` allowed, no `/`); it becomes the R2 key `docs/<orgId>/<projectSlug>/<name>.md`, which is exactly what the project page renders. `document` is also `.strict()`. This is how the four Markdown docs (including the health-check ones) reach gloria.dev — the server **stores** them, it never **runs** the probes.
+
 ### Workflow
 
 1. `get_info({ orgSlug })` to confirm access (optional but cheap).
 2. `register_project` once for the project.
 3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`.
-4. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
+4. Optionally `put_document` once per Markdown doc (e.g. `EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
+5. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
 
-`register_project` and `put_dependency` are **upserts keyed by slug**, so re-running them after the code changes keeps the inventory current — that's the intended way to resync.
+`register_project`, `put_dependency`, and `put_document` are **upserts keyed by slug/name**, so re-running them after the code changes keeps the inventory current — that's the intended way to resync.
 
 ## Anti-patterns
 
 - ❌ Executing the probes or blocking on missing credentials. Document only.
 - ❌ Putting databases, caches, or LLM gateways in the external doc because they have a hostname — infrastructure is internal.
+- ❌ Listing a service the app never calls outbound — a library used only locally (e.g. verifying an inbound webhook's signature, like Svix) or an inbound-only sender. Require evidence of an actual outbound request; an import or manifest entry is not enough.
 - ❌ Inventing endpoints. Every URL, auth header, and env var must come from the codebase; if you can't find one, say so rather than guessing.
 - ❌ Skipping the Mermaid diagrams or the cross-links between docs.
 - ❌ Hard-coding secrets into samples instead of env vars.
 - ❌ Syncing to gloria.dev unprompted, or inventing an `orgSlug` — it's an opt-in step and the org must be supplied.
-- ❌ Calling `put_dependency` before `register_project` for that project, or adding fields the `details` schema doesn't define (auth keys, runtime flags) — strict validation rejects them.
-- ❌ Expecting an MCP tool for health checks — the server syncs the inventory only; the curl probes live solely in the Markdown docs.
+- ❌ Calling `put_dependency` or `put_document` before `register_project` for that project, or adding fields the `details` / `document` schema doesn't define (auth keys, runtime flags) — strict validation rejects them.
+- ❌ Expecting an MCP tool that *runs* health checks — the server stores the inventory and the Markdown docs (via `put_document`), but it never executes the curl probes.
 
 ## Reference Examples
 
