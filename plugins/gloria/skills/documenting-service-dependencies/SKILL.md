@@ -20,7 +20,7 @@ Generate **all four by default**. Cross-link them (each inventory links to its h
 
 **Document only — never execute the health-check commands.** Write them from code evidence (endpoints, auth headers, env vars). Do not run them or require live credentials.
 
-**Optionally sync the inventory to gloria.dev** (the monitoring product) via its MCP server so the dependencies are watched continuously. This is a separate, opt-in step — see [Syncing the inventory to gloria.dev](#syncing-the-inventory-to-gloriadev-mcp-server). The four Markdown docs are still the primary deliverable; only sync when the user asks to register/push the inventory.
+**Then sync the inventory to gloria.dev** (the monitoring product) via its MCP server so the dependencies are watched continuously — see [Syncing the inventory to gloria.dev](#syncing-the-inventory-to-gloriadev-mcp-server). This is a **required final step**, not optional: once the four Markdown docs exist, push the structured inventory (and the docs) so monitoring actually starts. The organization is taken from your authenticated gloria.dev session — you never supply or ask for an org slug. The only time you stop at the Markdown docs is when the gloria.dev MCP server isn't connected in your environment; say so explicitly.
 
 ## Classification Rule (the most important step)
 
@@ -52,7 +52,8 @@ When a managed cloud has both faces, split it: a public console/API URL → exte
 3. **For each surviving service, capture:** purpose (how the app uses it), the **exact URL(s)/host(s)** the app calls, the **auth mechanism** and the **env var(s)** that hold credentials and config, and whether it's runtime vs. CI/dev-only.
 4. **Classify** each per the rule above.
 5. **Write the two inventory docs**, then the two health-check docs (one probe per service, in the same section order as its inventory).
-6. Report what you found and any classification calls you made — including candidates you **excluded** by the inclusion gate (e.g. local-only libraries) and why.
+6. **Sync to gloria.dev** — register the project and push every dependency (and the four docs) via the MCP server, per [Syncing the inventory to gloria.dev](#syncing-the-inventory-to-gloriadev-mcp-server). Required whenever that server is connected.
+7. Report what you found and any classification calls you made — including candidates you **excluded** by the inclusion gate (e.g. local-only libraries) and why, plus what you synced.
 
 ## Inventory Document Structure
 
@@ -93,24 +94,26 @@ Each health-check doc (`EXTERNAL_SAAS_HEALTHCHECKS.md`, `INTERNAL_SYSTEMS_HEALTH
 
 ## Syncing the inventory to gloria.dev (MCP server)
 
-gloria.dev runs a remote **MCP server** that lets a coding agent push the inventory you produced into a gloria.dev organization, where the web service monitors each dependency. Use it only when the user asks to register/sync/push the inventory — it does not replace the four Markdown docs.
+gloria.dev runs a remote **MCP server** that lets a coding agent push the inventory you produced into your gloria.dev organization, where the web service monitors each dependency. Syncing is the **required final step** of this skill whenever the server is connected — it complements, it does not replace, the four Markdown docs.
 
-**Connection.** Point your MCP client at `https://mcp.gloria.dev/mcp` (Streamable HTTP). Auth is **Clerk OAuth** — the client does the handshake; you act as the already-authenticated user. Every tool takes an `orgSlug`, and you must be a member of that org (reads need `inventory:read`, writes need `inventory:write`). If the user hasn't given an org slug, ask — don't guess.
+**Connection.** Point your MCP client at `https://mcp.gloria.dev/mcp` (Streamable HTTP). Auth is **Clerk OAuth** — the client does the handshake; you act as the already-authenticated user. **The organization is your session's active org — no tool takes an `orgSlug`, and you never ask for or guess one.** Your session role governs access (reads need `inventory:read`, writes need `inventory:write`). If the session has no active organization, the server returns an error telling you to select one — surface that to the user rather than working around it.
 
 **Data model.** An **organization** contains **projects**; each project has a **dependency inventory**. The dependency model mirrors this skill's own classification exactly: external SaaS ↔ `kind: "external_saas"`, internal system ↔ `kind: "internal_system"`.
 
 ### Tools
 
-| Tool                 | Args                                                              | Does                                                            | Perm              |
-| -------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------- | ----------------- |
-| `get_info`           | `{ orgSlug }`                                                    | Return org `{ id, name, slug }`. Use as an access sanity check. | `inventory:read`  |
-| `list_projects`      | `{ orgSlug }`                                                    | List the org's projects.                                        | `inventory:read`  |
-| `register_project`   | `{ orgSlug, project }`                                           | Upsert a project by slug.                                       | `inventory:write` |
-| `list_dependencies`  | `{ orgSlug, projectSlug }`                                       | List a project's dependencies as summaries.                    | `inventory:read`  |
-| `get_dependency`     | `{ orgSlug, projectSlug, slug }`                                 | Return one dependency's full detail.                           | `inventory:read`  |
-| `put_dependency`     | `{ orgSlug, projectSlug, dependency }`                          | Upsert one dependency by slug. Project must already exist.      | `inventory:write` |
-| `delete_dependency`  | `{ orgSlug, projectSlug, slug }`                                 | Remove a dependency by slug. Idempotent (missing = success).    | `inventory:write` |
-| `put_document`       | `{ orgSlug, projectSlug, document }`                            | Upsert a Markdown doc by name. Project must already exist.      | `inventory:write` |
+All tools act on your session's active org; none take an `orgSlug`.
+
+| Tool                 | Args                                  | Does                                                            | Perm              |
+| -------------------- | ------------------------------------- | -------------------------------------------------------------- | ----------------- |
+| `get_info`           | `{}`                                  | Return org `{ id, name, slug }`. Use as an access sanity check. | `inventory:read`  |
+| `list_projects`      | `{}`                                  | List the org's projects.                                        | `inventory:read`  |
+| `register_project`   | `{ project }`                         | Upsert a project by slug.                                       | `inventory:write` |
+| `list_dependencies`  | `{ projectSlug }`                     | List a project's dependencies as summaries.                    | `inventory:read`  |
+| `get_dependency`     | `{ projectSlug, slug }`               | Return one dependency's full detail.                           | `inventory:read`  |
+| `put_dependency`     | `{ projectSlug, dependency }`         | Upsert one dependency by slug. Project must already exist.      | `inventory:write` |
+| `delete_dependency`  | `{ projectSlug, slug }`               | Remove a dependency by slug. Idempotent (missing = success).    | `inventory:write` |
+| `put_document`       | `{ projectSlug, document }`           | Upsert a Markdown doc by name. Project must already exist.      | `inventory:write` |
 
 ### Payload shapes
 
@@ -152,10 +155,10 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 ### Workflow
 
-1. `get_info({ orgSlug })` to confirm access (optional but cheap).
+1. `get_info()` to confirm access and that your session has an active org (cheap sanity check). A no-active-org error here is what you surface to the user.
 2. `register_project` once for the project.
 3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`.
-4. Optionally `put_document` once per Markdown doc (e.g. `EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
+4. `put_document` once per Markdown doc (`EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
 5. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
 
 `register_project`, `put_dependency`, and `put_document` are **upserts keyed by slug/name**, so re-running them after the code changes keeps the inventory current — that's the intended way to resync.
@@ -168,7 +171,8 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 - ❌ Inventing endpoints. Every URL, auth header, and env var must come from the codebase; if you can't find one, say so rather than guessing.
 - ❌ Skipping the Mermaid diagrams or the cross-links between docs.
 - ❌ Hard-coding secrets into samples instead of env vars.
-- ❌ Syncing to gloria.dev unprompted, or inventing an `orgSlug` — it's an opt-in step and the org must be supplied.
+- ❌ Treating the gloria.dev sync as optional, or skipping it when the MCP server is connected — pushing the inventory is a required final step.
+- ❌ Asking for or passing an `orgSlug` — no tool takes one; the org comes from your authenticated session. If the session has no active org, surface the server's error instead of guessing.
 - ❌ Calling `put_dependency` or `put_document` before `register_project` for that project, or adding fields the `details` / `document` schema doesn't define (auth keys, runtime flags) — strict validation rejects them.
 - ❌ Expecting an MCP tool that *runs* health checks — the server stores the inventory and the Markdown docs (via `put_document`), but it never executes the curl probes.
 
