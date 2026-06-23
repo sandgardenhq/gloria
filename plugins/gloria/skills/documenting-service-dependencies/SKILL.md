@@ -141,15 +141,22 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
   "category": "git_hosting",        // enum, see below
   "purpose": "How the app uses it.",
   "endpoints": [{ "label": "REST API", "url": "https://api.github.com" }],
-  "details": { /* kind-specific, see below */ }
+  "details": { /* kind-specific, see below */ },
+  "healthCheck": {                  // optional: one unauthenticated HTTP probe gloria.dev monitors
+    "url": "https://api.github.com/zen",
+    "method": "GET",               // optional, default GET (GET | HEAD | POST)
+    "expectedStatus": { "min": 200, "max": 299 },  // optional, default 200–299
+    "enabled": true                // optional, default true
+  }
 }
 ```
 
 - `category` ∈ `auth_identity`, `git_hosting`, `issue_tracking`, `communication`, `cloud_storage`, `llm_ai`, `observability`, `datastore`, `llm_gateway`, `aws_platform`, `app_service`, `dev_tooling`. No "other" — pick the closest. `aws_platform` is the bucket for **any** hosting platform's first-party managed services (despite the AWS-specific name) — a Cloudflare D1/R2/KV/Queues/Secrets Store or a GCP/Azure equivalent goes here too. (A platform-native datastore may instead use `datastore` when that fits better; either way it stays an `internal_system`.)
 - **external_saas** `details`: `{ "webhooks": [{ "event": "push", "direction": "inbound" }], "provider"?: "github" }`. `webhooks` is **required** — send `[]` when there are none.
 - **internal_system** `details`: `{ "reachability": "vpc_internal", "addressEnv"?: "DATABASE_URL" }`. `reachability` ∈ `public`, `vpc_internal`, `link_local`, `in_task_only`, `localhost_dev`.
+- `healthCheck` is **optional**. When present it must be a single **unauthenticated** HTTP probe. `url` is **required** — use the cheap liveness/whoami/health endpoint you already chose for the Markdown probe, but **without** any auth headers (the embedded check sends none). `method` defaults `GET`, `expectedStatus` defaults `{ "min": 200, "max": 299 }`, and `enabled` defaults `true`. Only the four fields `url`, `method`, `expectedStatus`, `enabled` are allowed.
 
-`details` is **strict** — unknown fields are rejected, not ignored. The schema deliberately has **no slot for auth mechanism / credential env vars** (beyond an internal system's `addressEnv` name), **no runtime-vs-CI flag**, and **no health-check commands**. Keep that richer detail in the Markdown docs; don't try to smuggle it into `details`.
+`details` is **strict** — unknown fields are rejected, not ignored. The embedded `healthCheck` carries **one unauthenticated HTTP probe** per service; richer/authenticated/non-HTTP probe detail (auth headers, TCP `nc` checks, `aws sts`/CLI auth, JSON-body `ok`-field checks) still belongs **only** in the Markdown docs, because the embedded check is unauthenticated and HTTP-only. `details` still has **no slot for auth mechanism / credential env vars** (beyond an internal system's `addressEnv` name) and **no runtime-vs-CI flag** — don't try to smuggle that into `details` or into `healthCheck`.
 
 `document` (for `put_document`):
 
@@ -163,7 +170,7 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 1. `get_info()` to confirm access and that your session has an active org (cheap sanity check). A no-active-org error here is what you surface to the user.
 2. `register_project` once for the project.
-3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`.
+3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`. When the service has a cheap unauthenticated HTTP liveness endpoint, include a `healthCheck` for it with `enabled: true` (the gloria.dev web service runs these on a schedule). Don't disable a check — disabling is a user action in the web UI.
 4. `put_document` once per Markdown doc (`EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
 5. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
 
