@@ -40,10 +40,16 @@ When in doubt, **trace the call** to where the URL is actually requested or the 
 
 ### External vs. internal
 
-- **External SaaS** = hosted on a **different domain than the application**, with a **publicly addressable URL** (e.g. `api.github.com`, `slack.com`, `api.openai.com`).
-- **Internal** = anything reached via `localhost`, a **private IP** (10./172.16./192.168.), a **link-local** address (169.254.), an **internal-only AWS endpoint** (Bedrock internal URLs, ECS task metadata), the application's **own services**, OR an **infrastructure component** regardless of address — **databases, caches, search engines, message queues, LLM gateways**.
+- **External SaaS** = a **third-party product the app consumes as a customer**, hosted on a **different domain than the application**, with a **publicly addressable URL** (e.g. `api.github.com`, `slack.com`, `api.openai.com`).
+- **Internal** = anything reached via `localhost`, a **private IP** (10./172.16./192.168.), a **link-local** address (169.254.), an **internal-only AWS endpoint** (Bedrock internal URLs, ECS task metadata), the application's **own services**, an **infrastructure component** regardless of address (**databases, caches, search engines, message queues, LLM gateways**), OR a **first-party service of the app's own hosting/cloud platform** — the provider the app deploys on and its built-in managed services for storage, secrets, config, compute, encryption, and logging.
 
-When a managed cloud has both faces, split it: a public console/API URL → external; an in-VPC or platform endpoint (S3 via IAM role, KMS, Secrets Manager, CloudWatch, Bedrock) → internal. When unsure, classify by _how the app reaches it in production_ and note the ambiguity.
+**First-party platform services are internal even when reached over the provider's public API.** Identify the app's host platform first (Cloudflare Workers, AWS/ECS/Lambda, GCP, Azure, Vercel, Fly.io, …); its own managed services are infrastructure, not third-party SaaS, regardless of the URL they're reached at:
+
+- **AWS app** → S3, KMS, Secrets Manager, CloudWatch, Bedrock, SQS — internal (whether via an IAM-role/in-VPC endpoint **or** the public AWS API).
+- **Cloudflare app** → D1, R2, KV, Queues, **Secrets Store**, Workers AI — internal **even when called via `https://api.cloudflare.com/client/v4/...`**. That host is Cloudflare's control plane for *your own* resources; managing your own secret store there is the Cloudflare counterpart of AWS Secrets Manager (which this skill already treats as internal), not a third-party API you're a customer of.
+- **GCP / Azure / Vercel / Fly.io / …** → the same: the platform's own datastore, secret, storage, and queue services are internal.
+
+The deciding question is **ownership, not URL**: are you calling the **management/control plane of a resource that belongs to you on your own platform** (→ internal), or a **separate product you're a customer of** (→ external)? A public, different-domain URL alone does **not** make something external — `api.cloudflare.com` for *your* secret store is internal; `api.stripe.com` for Stripe's product is external. When a single managed cloud genuinely has both faces (a product you also consume independently of your own deployment), split it and note the ambiguity; otherwise classify by ownership and by _how the app reaches it in production_.
 
 ## Process
 
@@ -139,7 +145,7 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 }
 ```
 
-- `category` ∈ `auth_identity`, `git_hosting`, `issue_tracking`, `communication`, `cloud_storage`, `llm_ai`, `observability`, `datastore`, `llm_gateway`, `aws_platform`, `app_service`, `dev_tooling`. No "other" — pick the closest.
+- `category` ∈ `auth_identity`, `git_hosting`, `issue_tracking`, `communication`, `cloud_storage`, `llm_ai`, `observability`, `datastore`, `llm_gateway`, `aws_platform`, `app_service`, `dev_tooling`. No "other" — pick the closest. `aws_platform` is the bucket for **any** hosting platform's first-party managed services (despite the AWS-specific name) — a Cloudflare D1/R2/KV/Queues/Secrets Store or a GCP/Azure equivalent goes here too. (A platform-native datastore may instead use `datastore` when that fits better; either way it stays an `internal_system`.)
 - **external_saas** `details`: `{ "webhooks": [{ "event": "push", "direction": "inbound" }], "provider"?: "github" }`. `webhooks` is **required** — send `[]` when there are none.
 - **internal_system** `details`: `{ "reachability": "vpc_internal", "addressEnv"?: "DATABASE_URL" }`. `reachability` ∈ `public`, `vpc_internal`, `link_local`, `in_task_only`, `localhost_dev`.
 
@@ -167,6 +173,7 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 - ❌ Executing the probes or blocking on missing credentials. Document only.
 - ❌ Putting databases, caches, or LLM gateways in the external doc because they have a hostname — infrastructure is internal.
+- ❌ Putting the app's **own hosting platform's first-party services** in the external doc because they're reached over a public API. _Example: a Cloudflare Workers app managing its secrets via `https://api.cloudflare.com/client/v4/accounts/.../secrets_store/...` — that's Cloudflare's control plane for **your own** Secrets Store (the Cloudflare counterpart of AWS Secrets Manager), so it's **internal**, not external SaaS. Classify platform services by **ownership**, not by whether the URL is public._
 - ❌ Listing a service the app never calls outbound — a library used only locally (e.g. verifying an inbound webhook's signature, like Svix) or an inbound-only sender. Require evidence of an actual outbound request; an import or manifest entry is not enough.
 - ❌ Inventing endpoints. Every URL, auth header, and env var must come from the codebase; if you can't find one, say so rather than guessing.
 - ❌ Skipping the Mermaid diagrams or the cross-links between docs.
