@@ -131,6 +131,8 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 { "slug": "acme-api", "name": "Acme API", "description": "…", "repoUrl": "https://github.com/acme/api" } // repoUrl optional
 ```
 
+`slug` and `name` are required; `description` and `repoUrl` are optional. `description` is **backfilled from what you learned while exploring** (a one-or-two-sentence summary of what the project is and does) when the project has none — but an existing non-empty description is **never overwritten without the user's consent**. See [Resolving the project](#resolving-the-project).
+
 `dependency` is a discriminated union on `kind`. Shared fields plus a `kind`-specific `details`:
 
 ```jsonc
@@ -169,10 +171,33 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 ### Workflow
 
 1. `get_info()` to confirm access and that your session has an active org (cheap sanity check). A no-active-org error here is what you surface to the user.
-2. `register_project` once for the project.
+2. **Resolve the project** (identify → match → describe) before any `put_dependency` / `put_document`, both of which require the project to exist. See [Resolving the project](#resolving-the-project) below.
 3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`. When the service has a cheap unauthenticated HTTP liveness endpoint, include a `healthCheck` for it with `enabled: true` (the gloria.dev web service runs these on a schedule). Don't disable a check — disabling is a user action in the web UI.
 4. `put_document` once per Markdown doc (`EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
 5. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
+
+### Resolving the project
+
+`register_project` is an **upsert keyed by slug**, so it both creates a missing project and updates an existing one. Don't call it blindly — first work out *which* project this codebase is, and never clobber a description a human may have edited. Three phases:
+
+**1. Identify (from the git remote, with fallback).** Read `origin`'s URL.
+
+- **Has a remote:** `repoUrl` = that URL normalized to `https://…/owner/repo` (strip a trailing `.git`); `slug` = the kebab-cased repo basename (lowercase, every non-alphanumeric run → a single `-`, trimmed — must satisfy `^[a-z0-9]+(?:-[a-z0-9]+)*$`); `name` = the humanized basename (e.g. `gloria-dev` → "Gloria Dev").
+- **No remote:** derive `slug` / `name` from the working-directory name the same way; omit `repoUrl`.
+
+**2. Match (slug first, `repoUrl` fallback).** Call `list_projects()`, then:
+
+- A project whose `slug` equals the derived slug → **that's the project** (exists).
+- Else, if the derived `repoUrl` is non-empty and some project's `repoUrl` equals it → **that's the project** (exists). The slug differs, so **keep using the existing project's slug** for every later call — don't fork a duplicate.
+- Else → **create**: `register_project` with the derived `slug` / `name` / `repoUrl`, silently (it's an idempotent upsert).
+- **Ambiguity:** if the slug matches one project but `repoUrl` matches a *different* one, prefer the **slug** match (it's the upsert key) and note the ambiguity in your final report — don't guess or create a third.
+
+**3. Describe (backfill, or update only with consent).** Look at the resolved project's `description`:
+
+- **Just created, or existing with an empty/absent description** → write a **one-or-two-sentence** description (what the project *is* and does, drawn from what you learned while exploring — README, manifests, the dependency picture you just built) and set it. Backfill silently.
+- **Existing with a non-empty description** → **do not overwrite it silently.** Show the user the current description and your freshly-generated one and **ask whether to replace**; update only on consent. If you can't ask (non-interactive run), leave the existing description and note it in your report.
+
+When setting/updating the description on a project that already has a `name` / `repoUrl`, send those alongside `description` in the `register_project` call so the upsert doesn't blank them.
 
 `register_project`, `put_dependency`, and `put_document` are **upserts keyed by slug/name**, so re-running them after the code changes keeps the inventory current — that's the intended way to resync.
 
@@ -188,6 +213,9 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 - ❌ Treating the gloria.dev sync as optional, or skipping it when the MCP server is connected — pushing the inventory is a required final step.
 - ❌ Asking for or passing an `orgSlug` — no tool takes one; the org comes from your authenticated session. If the session has no active org, surface the server's error instead of guessing.
 - ❌ Calling `put_dependency` or `put_document` before `register_project` for that project, or adding fields the `details` / `document` schema doesn't define (auth keys, runtime flags) — strict validation rejects them.
+- ❌ Overwriting an existing (possibly human-edited) project description without asking — backfill only when it's empty; otherwise get the user's consent.
+- ❌ Creating a duplicate project when one already exists under a different slug but the same `repoUrl` — match on `repoUrl` and reuse the existing project's slug.
+- ❌ Leaving a freshly-created or empty project with no description when your exploration yielded enough to write a one-or-two-sentence summary.
 - ❌ Expecting an MCP tool that *runs* health checks — the server stores the inventory and the Markdown docs (via `put_document`), but it never executes the curl probes.
 
 ## Reference Examples
