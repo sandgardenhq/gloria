@@ -144,21 +144,33 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
   "purpose": "How the app uses it.",
   "endpoints": [{ "label": "REST API", "url": "https://api.github.com" }],
   "details": { /* kind-specific, see below */ },
-  "healthCheck": {                  // optional: one unauthenticated HTTP probe gloria.dev monitors
-    "url": "https://api.github.com/zen",
-    "method": "GET",               // optional, default GET (GET | HEAD | POST)
-    "expectedStatus": { "min": 200, "max": 299 },  // optional, default 200–299
-    "enabled": true                // optional, default true
-  }
+  "healthCheck": { /* optional probe gloria.dev runs on a schedule — pick the TYPE from how the code uses the service; see "Choosing the embedded health-check probe" */ }
 }
 ```
 
 - `category` ∈ `auth_identity`, `git_hosting`, `issue_tracking`, `communication`, `cloud_storage`, `llm_ai`, `observability`, `datastore`, `llm_gateway`, `aws_platform`, `app_service`, `dev_tooling`. No "other" — pick the closest. `aws_platform` is the bucket for **any** hosting platform's first-party managed services (despite the AWS-specific name) — a Cloudflare D1/R2/KV/Queues/Secrets Store or a GCP/Azure equivalent goes here too. (A platform-native datastore may instead use `datastore` when that fits better; either way it stays an `internal_system`.)
 - **external_saas** `details`: `{ "webhooks": [{ "event": "push", "direction": "inbound" }], "provider"?: "github" }`. `webhooks` is **required** — send `[]` when there are none.
 - **internal_system** `details`: `{ "reachability": "vpc_internal", "addressEnv"?: "DATABASE_URL" }`. `reachability` ∈ `public`, `vpc_internal`, `link_local`, `in_task_only`, `localhost_dev`.
-- `healthCheck` is **optional**. When present it must be a single **unauthenticated** HTTP probe. `url` is **required** — use the cheap liveness/whoami/health endpoint you already chose for the Markdown probe, but **without** any auth headers (the embedded check sends none). `method` defaults `GET`, `expectedStatus` defaults `{ "min": 200, "max": 299 }`, and `enabled` defaults `true`. Only the four fields `url`, `method`, `expectedStatus`, `enabled` are allowed.
+- `healthCheck` is **optional** and is a **discriminated union on `type`**. Choose the `type` from **how the application reaches the service** — see [Choosing the embedded health-check probe](#choosing-the-embedded-health-check-probe). Defaults across every type: `enabled: true`, `timeoutMs: 5000`.
 
-`details` is **strict** — unknown fields are rejected, not ignored. The embedded `healthCheck` carries **one unauthenticated HTTP probe** per service; richer/authenticated/non-HTTP probe detail (auth headers, TCP `nc` checks, `aws sts`/CLI auth, JSON-body `ok`-field checks) still belongs **only** in the Markdown docs, because the embedded check is unauthenticated and HTTP-only. `details` still has **no slot for auth mechanism / credential env vars** (beyond an internal system's `addressEnv` name) and **no runtime-vs-CI flag** — don't try to smuggle that into `details` or into `healthCheck`.
+`details` is **strict** — unknown fields are rejected, not ignored. Non-HTTP probe detail you can't model in the embedded probe (TCP `nc` checks, `aws sts`/CLI auth, JSON-body `ok`-field checks, header styles the probe types below don't cover) still belongs **only** in the Markdown docs. `details` has **no slot for auth mechanism / credential env vars** (beyond an internal system's `addressEnv` name) and **no runtime-vs-CI flag** — don't try to smuggle that into `details` or into `healthCheck`.
+
+### Choosing the embedded health-check probe
+
+The embedded probe is **not always unauthenticated** — that was the old model. **Read how the app authenticates to the service, then pick the matching probe type.** An unauthenticated probe against a resource that requires credentials is a defect: it either can't see the real resource or returns a misleading status (a `401`/`404` reads as "up" to a probe that never sent a token), so the dependency looks healthy when your actual access is broken.
+
+The probe types an agent can sync through MCP are:
+
+| `type`          | Auth                | Fields (beyond the `enabled` / `timeoutMs` defaults)                                  | Use when                                                                                  |
+| --------------- | ------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `"http"`        | **none**            | `url` (required); `method` (`GET`\|`HEAD`\|`POST`, default `GET`); `expectedStatus` (default `{min:200,max:299}`) | The service has a genuinely **public** liveness endpoint that returns a meaningful up/down with **no credentials** — a public `/health`, status page, or unauthenticated API root. |
+| `"http-bearer"` | **Bearer token**    | same as `http`, plus `token` (a secret — see below)                                   | The endpoint the app actually uses requires a **`Authorization: Bearer …`** token (private resource, token-gated API). |
+
+**The selection rule:** if hitting the endpoint the app relies on *without* a credential would not prove your access works, do **not** use `"http"`. Use `"http-bearer"` against an authenticated endpoint and declare the token as a secret. _Example: a **private** GitHub repo. `https://api.github.com/zen` is public, so an `http` probe there only proves GitHub-the-service is up — it says nothing about whether your token can still reach the repo. Probe `https://api.github.com/repos/OWNER/REPO` (or `/user`) with `type: "http-bearer"` so a revoked/expired token surfaces as a real failure._
+
+**Declaring the token (and never the value).** In `http-bearer`, set `token` to a bare secret **declaration** — `{ "kind": "secret", "hint": "GitHub PAT" }` — and nothing else. The agent **never** transmits a secret value, ref, or `configured` flag; strict validation rejects a stray `value`/`ref`/`configured`. gloria.dev mints the ref server-side, the user enters the value on the project's Configure-secrets page (the tool returns a `configUrl` deep-linked to the dependency), and the runner resolves it at probe time. Until the value is entered the dependency sits in `needs_config` and is not probed — that's expected, not a failure. (You *may* instead pass a literal `{ "kind": "literal", "value": "…" }` token, but **don't** — that hard-codes a secret; always declare it.)
+
+**When neither type fits.** Some services authenticate in a way the embedded probe can't model: an **API-key header** (`x-api-key`, `PRIVATE-TOKEN`), **HTTP Basic**, **AWS SigV4**, or a vendor **SDK** call, and non-HTTP datastores (TCP-only). For those, **omit `healthCheck`** rather than emitting a misleading unauthenticated `http` probe, keep the authenticated probe in the Markdown health-check doc, and tell the user that gloria.dev offers a **dedicated authenticated connector** they can attach in the web UI (the platform ships connectors for GitHub, GitLab, Bitbucket, OpenAI, Anthropic, Notion, Linear, Slack, Clerk, Atlassian/Jira, and AWS STS/KMS/Bedrock/CloudWatch Logs/Secrets Manager, each running a real authenticated probe). The agent-sync path emits `http`/`http-bearer`; richer connectors are a web-UI upgrade.
 
 `document` (for `put_document`):
 
@@ -172,7 +184,7 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 1. `get_info()` to confirm access and that your session has an active org (cheap sanity check). A no-active-org error here is what you surface to the user.
 2. **Resolve the project** (identify → match → describe) before any `put_dependency` / `put_document`, both of which require the project to exist. See [Resolving the project](#resolving-the-project) below.
-3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`. When the service has a cheap unauthenticated HTTP liveness endpoint, include a `healthCheck` for it with `enabled: true` (the gloria.dev web service runs these on a schedule). Don't disable a check — disabling is a user action in the web UI.
+3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`. Attach a `healthCheck` whose **`type` matches how the app reaches the service** — `http` for a genuinely public liveness endpoint, `http-bearer` (token declared as a secret) when reaching the real resource needs a Bearer token, and **no** `healthCheck` when the auth style fits neither (see [Choosing the embedded health-check probe](#choosing-the-embedded-health-check-probe)). The gloria.dev web service runs the check on a schedule. Don't disable a check — disabling is a user action in the web UI.
 4. `put_document` once per Markdown doc (`EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
 5. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
 
@@ -213,6 +225,8 @@ When setting/updating the description on a project that already has a `name` / `
 - ❌ Treating the gloria.dev sync as optional, or skipping it when the MCP server is connected — pushing the inventory is a required final step.
 - ❌ Asking for or passing an `orgSlug` — no tool takes one; the org comes from your authenticated session. If the session has no active org, surface the server's error instead of guessing.
 - ❌ Calling `put_dependency` or `put_document` before `register_project` for that project, or adding fields the `details` / `document` schema doesn't define (auth keys, runtime flags) — strict validation rejects them.
+- ❌ Emitting an unauthenticated `type: "http"` probe against a resource that requires credentials — a private GitHub repo, any endpoint that `401`s without a token. The probe reads `401`/`404` as "up" and the dependency looks healthy while your real access is broken. Use `type: "http-bearer"` with the token declared as a secret, or omit `healthCheck` and rely on a web-UI connector. _Match the probe type to how the code authenticates._
+- ❌ Putting a secret **value**, `ref`, or `configured` flag in a `http-bearer` token — declare only `{ "kind": "secret", "hint": "…" }`; the value is entered by the user in the web UI, never transmitted by the agent.
 - ❌ Overwriting an existing (possibly human-edited) project description without asking — backfill only when it's empty; otherwise get the user's consent.
 - ❌ Creating a duplicate project when one already exists under a different slug but the same `repoUrl` — match on `repoUrl` and reuse the existing project's slug.
 - ❌ Leaving a freshly-created or empty project with no description when your exploration yielded enough to write a one-or-two-sentence summary.
