@@ -65,7 +65,9 @@ Rank: strong (publish) vs. propose-and-ask (thinner / opinionated / overlapping)
 
 ### 4. Check the library before proposing anything missing
 
-Per `using-the-skills-library`: `search_skills` with **2–3 synonym queries** per candidate (the search is a substring match on name/description), and `get_skill` on near-matches to read scope. A match → move it to the *already-in-library* bucket. This is what prevents duplicate publishes.
+Per `using-the-skills-library`: `search_skills` with **2–3 synonym queries** per candidate (the substring query matches name/description only), **and** narrow with the `tags` filter (AND semantics) to catch relevant skills a substring query would miss — a no-args `search_skills` lists every skill and surfaces the tags already in use. `get_skill` on near-matches to read scope. A match → move it to the *already-in-library* bucket. This is what prevents duplicate publishes.
+
+Remember the org ships **pre-seeded with gloria.dev system skills** (read-only, author `gloria.dev`). They're a third "already covered" source alongside the enabled plugins/marketplaces from step 1 — a candidate satisfied by a seeded system skill belongs in *already-in-library*, not *missing*, and must not be re-authored (a republish over a system skill is rejected with `409`).
 
 ### 5. Assemble each missing-but-useful bundle
 
