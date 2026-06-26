@@ -20,7 +20,7 @@ Generate **all four by default**. Cross-link them (each inventory links to its h
 
 **Document only — never execute the health-check commands.** Write them from code evidence (endpoints, auth headers, env vars). Do not run them or require live credentials.
 
-**Then sync the inventory to gloria.dev** (the monitoring product) via its MCP server so the dependencies are watched continuously — see [Syncing the inventory to gloria.dev](#syncing-the-inventory-to-gloriadev-mcp-server). This is a **required final step**, not optional: once the four Markdown docs exist, push the structured inventory (and the docs) so monitoring actually starts. The organization is taken from your authenticated gloria.dev session — you never supply or ask for an org slug. The only time you stop at the Markdown docs is when the gloria.dev MCP server isn't connected in your environment; say so explicitly.
+**Then sync the inventory to gloria.dev** (whose Canary tool monitors dependencies) via its MCP server so the dependencies are watched continuously — see [Syncing the inventory to gloria.dev](#syncing-the-inventory-to-gloriadev-mcp-server). This is a **required final step**, not optional: once the four Markdown docs exist, push the structured inventory (and the docs) so monitoring actually starts. The organization is taken from your authenticated gloria.dev session — you never supply or ask for an org slug. The only time you stop at the Markdown docs is when the gloria.dev MCP server isn't connected in your environment; say so explicitly.
 
 ## Classification Rule (the most important step)
 
