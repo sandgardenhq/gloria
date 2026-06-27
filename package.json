@@ -1,0 +1,8 @@
+{
+  "name": "gloria",
+  "version": "0.1.6",
+  "type": "module",
+  "description": "gloria.dev OpenCode plugin — dependency-discovery skills + the gloria.dev MCP server.",
+  "homepage": "https://gloria.dev",
+  "license": "MIT"
+}
