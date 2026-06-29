@@ -92,7 +92,9 @@ Independently of publishing, **ask the user whether to install each kept skill l
 - **Project-local** → `<project>/.claude/skills/<slug>/SKILL.md` (+ supporting files). Available to anyone (and any agent) working in this repo. Ask whether to commit it or leave it gitignored.
 - **Global** → `~/.claude/skills/<slug>/SKILL.md`. Available across all of the user's projects.
 
-Installing = writing the same staged bundle files into the chosen directory. Publishing to the library and installing locally are separate choices — a user may want one, both, or neither.
+For an **org-authored or gloria.dev** skill, installing = writing the staged bundle files into the chosen directory. **External marketplace skills are different** — their content is never copied; if a kept skill came from a `marketplace:<id>` source (its `search_skills` summary carries `source`/`plugin`/`supportedAgents`), don't write files. Install it through the host agent's native marketplace via `install_skill` per `using-the-skills-library` Workflow C, and note it pulls in the whole plugin.
+
+Publishing to the library and installing locally are separate choices — a user may want one, both, or neither.
 
 ## Output
 

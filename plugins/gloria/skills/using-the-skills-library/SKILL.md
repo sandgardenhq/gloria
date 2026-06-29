@@ -9,11 +9,13 @@ description: Use when about to author a new agent skill, when asked whether the 
 
 Your gloria.dev organization has a **versioned, org-wide skills library**. Before you write a new agent skill, check whether one already exists; when you build a reusable one, publish it so every project in the org can use it.
 
-Skills come from **three sources**, distinguished by the `source` field on each `search_skills` result:
+Skills come from **three sources**. Distinguish them with **two** fields on each `search_skills` result — `source` and `author` — because only external skills set `source`:
 
-- **`org`** — your organization's own published skills (mutable, versioned).
-- **`gloria.dev`** — read-only system skills seeded into every org.
-- **`marketplace:<id>`** — skills from an **external marketplace** your org subscribes to (e.g. Obra Superpowers). These are **metadata-only**: gloria indexes their frontmatter but never copies the content. You install them through the host coding agent's **native marketplace**, not via `get_skill`.
+- **org** — your organization's own published skills (mutable, versioned). `source` is **absent** (`undefined`); identify by `author === "org"`.
+- **gloria.dev** — read-only system skills seeded into every org. `source` is **absent**; identify by `author === "gloria.dev"`.
+- **marketplace** — skills from an **external marketplace** your org subscribes to (e.g. Obra Superpowers). These are the **only** results that set `source`, to the string `marketplace:<id>` (and `author === "marketplace"`). They are **metadata-only**: gloria indexes their frontmatter but never copies the content. You install them through the host coding agent's **native marketplace**, not via `get_skill`.
+
+So the reliable test is: **`source` starting with `marketplace:` ⇒ external** (use `install_skill`); **no `source` ⇒ internal** — then read `author` to tell `org` from `gloria.dev`. Never branch on `source === "org"`/`"gloria.dev"`; those values are never emitted.
 
 These tools live on the **gloria** MCP server and are **deferred** — they will not appear until you load them. Run `ToolSearch` with `gloria skill` (or `select:` the exact names) before calling them.
 
@@ -32,12 +34,12 @@ Not for project-only conventions (those go in `CLAUDE.md`) or one-off local skil
 
 | Tool | Use | Requires | Returns |
 |------|-----|----------|---------|
-| `search_skills` | Find an existing skill (org + system + external) | `query` (optional substring) and/or `tags` (optional `string[]`) — omit both to list all | Summaries: slug, name, description, latest version, `tags`, author, updated-at, plus `source`/`marketplace`/`plugin`/`supportedAgents` on external skills |
-| `get_skill` | Read a full bundle | `slug` (+ optional `version`) | SKILL.md + all supporting files. **External (marketplace) slugs return `409`** — use `install_skill` instead |
-| `list_skill_versions` | Inspect history | `slug` | Versions newest-first: name, description, content hash, author, timestamp |
-| `publish_skill` | Create / update a skill | `files[]` (each `{path, content}`) | `{ slug, name, version, contentHash }` |
-| `list_marketplaces` | See external subscriptions | — | Each subscription: id, repo URL, `supportedAgents`, sync status |
-| `install_skill` | Install an external skill | `marketplace` (id) + `agent` (`claude-code`\|`codex`) + `slug` **or** `plugin` | `{ plugin, repoUrl, commands[] }` — the host agent's native subscribe/install commands (commands only, never files) |
+| `search_skills` | Find an existing skill (org + system + external) | `query` (optional substring) and/or `tags` (optional `string[]`) — omit both to list all | Summaries: `slug`, `name`, `description`, `latestVersion`, `tags`, `author` (`org`/`gloria.dev`/`marketplace`), `updatedAt`. **External skills only** also carry `source` (`marketplace:<id>`), `marketplace`, `plugin`, `supportedAgents`. Internal skills omit `source` — see the discriminator note in the Overview. |
+| `get_skill` | Read a full bundle | `slug` (+ optional `version`) | SKILL.md + all supporting files. **External (marketplace) slugs return `409`** — use `install_skill` instead. Unknown slug → `404` |
+| `list_skill_versions` | Inspect history | `slug` | Versions newest-first: `version`, `name`, `description`, `contentHash`, `createdBy` (the publisher's user id — **not** the `org`/`gloria.dev` author marker), `createdAt`. Unknown slug → `404` |
+| `publish_skill` | Create / update a skill | `files[]` (each `{path, content}`) | `{ slug, name, version, contentHash }`. `403` (not admin), `409` (system-skill name), `422` (malformed bundle) |
+| `list_marketplaces` | See external subscriptions | — | Each subscription: `id`, `name`, `repoUrl`, `manifestName` (the `<plugin>@<handle>` install handle; null until first sync), `supportedAgents`, `status` (`syncing`/`active`/`error`), `lastSyncedAt`, `lastError` |
+| `install_skill` | Install an external skill | `marketplace` (id) + `agent` (`claude-code`\|`codex`) + `slug` **or** `plugin` | `{ agent, marketplace, marketplaceName, repoUrl, plugin, slug?, commands[] }` — each `commands[]` item is `{description, command}`, the host agent's native subscribe/install steps (commands only, never files). `409` if `agent` isn't in the marketplace's `supportedAgents`; `404` for an unknown marketplace/slug/plugin |
 
 **Tags.** Skills are tagged from the `tags:` frontmatter key in their `SKILL.md` (a scalar `tags: a, b` or a YAML sequence; each value is slugified, deduped, and capped). `search_skills`'s `tags` filter is **AND** — a skill matches only if it carries **every** tag you pass — and combines with `query` (both must hold). There is no tool that lists the org's tags, so to discover them, `search_skills` with no args and read the `tags` on the returned summaries.
 
@@ -64,11 +66,11 @@ Know these before you publish:
 
 When `search_skills` returns a skill whose `source` is `marketplace:<id>`, you **cannot** `get_skill` it — gloria never serves external content. Install it through the host agent's native marketplace instead:
 
-1. **Discover & branch on source.** `search_skills` for the task. If the best match has a `source` of `marketplace:<id>`, take its `marketplace` (id), `plugin`, and `supportedAgents` from the summary. (`org`/`gloria.dev` skills use `get_skill` as usual.)
-2. **Detect the host agent.** Determine whether you are running in **Claude Code** or **codex** — that is the `agent` you pass next. Confirm it's in the skill's `supportedAgents`; if not, tell the user this marketplace doesn't support their agent.
+1. **Discover & branch on source.** `search_skills` for the task. A result with a `source` of `marketplace:<id>` is external — take its `marketplace` (id), `plugin`, and `supportedAgents` from the summary. A result with **no `source`** is internal (`org` or `gloria.dev` per its `author`) — use `get_skill` as usual.
+2. **Detect the host agent.** Determine whether you are running in **Claude Code** or **codex** — that is the `agent` you pass next. Check it against the skill's `supportedAgents` first; if it's absent, tell the user this marketplace doesn't support their agent and stop (calling `install_skill` with an unsupported `agent` returns **`409`**).
 3. **Get the native commands.** Call `install_skill { marketplace, agent, slug }` (or pass `plugin` instead of `slug`). It returns `commands[]` — the exact subscribe/install steps for that agent — and the installing `plugin`. It never returns files.
-4. **Run the commands in the host agent.** Execute each returned command in order (e.g. Claude Code: `/plugin marketplace add <owner>/<repo>` then `/plugin install <plugin>@<repo>`; codex: `codex plugin marketplace add <owner>/<repo>` then install via `/plugins`). Restate that this installs the **whole plugin** `<plugin>`, which may bundle more skills than the one searched.
-5. **Confirm the plugin-level install.** After the agent reports success, confirm the plugin (and its skills) loaded — reload plugins if the agent requires it.
+4. **Run the commands in the host agent — verbatim.** Execute each returned `command` in order; do **not** hand-construct them. The Claude Code install target is `<plugin>@<handle>`, where `<handle>` is the marketplace's **manifest name** (`manifestName`), which can differ from the repo name — so trust the returned string, not a guessed `<plugin>@<repo>`. (Shape: Claude Code → `/plugin marketplace add <owner>/<repo>`, then `/plugin install <plugin>@<handle>`, then `/reload-plugins`; codex → `codex plugin marketplace add <owner>/<repo>`, then install via `/plugins`.) Restate that this installs the **whole plugin** `<plugin>`, which may bundle more skills than the one searched.
+5. **Confirm the plugin-level install.** After running every returned command (the Claude Code flow already includes `/reload-plugins`), confirm the plugin and its skills loaded.
 
 `list_marketplaces` shows which marketplaces the org subscribes to and their sync status; a marketplace still `syncing` may not list all its skills yet.
 
@@ -80,6 +82,8 @@ When `search_skills` returns a skill whose `source` is `marketplace:<id>`, you *
 - Expecting `publish_skill` to overwrite or let you pick a slug — it appends a version and derives the slug from the name.
 - Trying to republish over a gloria.dev system skill — it returns `409` and writes nothing; choose a distinct name.
 - Calling `get_skill` on an external (`marketplace:<id>`) skill — it returns `409`; gloria never serves external content, so use `install_skill` and run the native commands.
-- Pasting an `install_skill` command into the wrong agent — the commands are per-agent; pass the `agent` you're actually running in, and only if it's in the skill's `supportedAgents`.
+- Branching on `source === "org"` or `"gloria.dev"` — those are **never emitted**. Only external skills set `source` (`marketplace:<id>`); for internal skills `source` is absent and the discriminator is `author`.
+- Hand-building the install command as `<plugin>@<repo>` — the real handle is the marketplace's `manifestName`, which can differ from the repo. Run the exact `commands[]` `install_skill` returns instead.
+- Pasting an `install_skill` command into the wrong agent — the commands are per-agent; pass the `agent` you're actually running in, and only if it's in the skill's `supportedAgents` (otherwise `install_skill` returns `409`).
 - Forgetting that installing an external skill installs its **whole plugin** — restate the `plugin` so the user knows what else it brings.
 - Calling these tools without loading them first — they're deferred; `ToolSearch` for `gloria skill`.
