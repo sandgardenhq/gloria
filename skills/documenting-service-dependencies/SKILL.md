@@ -117,7 +117,7 @@ All tools act on your session's active org; none take an `orgSlug`.
 | `register_project`   | `{ project }`                         | Upsert a project by slug.                                       | `inventory:write` |
 | `list_dependencies`  | `{ projectSlug }`                     | List a project's dependencies as summaries.                    | `inventory:read`  |
 | `get_dependency`     | `{ projectSlug, slug }`               | Return one dependency's full detail.                           | `inventory:read`  |
-| `put_dependency`     | `{ projectSlug, dependency }`         | Upsert one dependency by slug. Project must already exist.      | `inventory:write` |
+| `put_dependency`     | `{ projectSlug, dependency, statusPageUrl? }` | Upsert one dependency by slug. Project must already exist. `statusPageUrl` optional — see below. | `inventory:write` |
 | `delete_dependency`  | `{ projectSlug, slug }`               | Remove a dependency by slug. Idempotent (missing = success).    | `inventory:write` |
 | `put_document`       | `{ projectSlug, document }`           | Upsert a Markdown doc by name. Project must already exist.      | `inventory:write` |
 
@@ -149,11 +149,19 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 ```
 
 - `category` ∈ `auth_identity`, `git_hosting`, `issue_tracking`, `communication`, `cloud_storage`, `llm_ai`, `observability`, `datastore`, `llm_gateway`, `aws_platform`, `app_service`, `dev_tooling`. No "other" — pick the closest. `aws_platform` is the bucket for **any** hosting platform's first-party managed services (despite the AWS-specific name) — a Cloudflare D1/R2/KV/Queues/Secrets Store or a GCP/Azure equivalent goes here too. (A platform-native datastore may instead use `datastore` when that fits better; either way it stays an `internal_system`.)
-- **external_saas** `details`: `{ "webhooks": [{ "event": "push", "direction": "inbound" }], "provider"?: "github" }`. `webhooks` is **required** — send `[]` when there are none.
+- **external_saas** `details`: `{ "webhooks": [{ "event": "push", "direction": "inbound" }], "provider"?: "github" }`. `webhooks` is **required** — send `[]` when there are none. **Always set `provider`** on an external SaaS dependency: a kebab-case canonical vendor key (`github`, `resend`, `openai`, `stripe`, …). gloria keys vendor-level data (including the status page, below) on `provider`; if you omit it, gloria falls back to the dependency `slug`, so make `slug` the vendor key when in doubt.
 - **internal_system** `details`: `{ "reachability": "vpc_internal", "addressEnv"?: "DATABASE_URL" }`. `reachability` ∈ `public`, `vpc_internal`, `link_local`, `in_task_only`, `localhost_dev`.
 - `healthCheck` is **optional** and is a **discriminated union on `type`**. Choose the `type` from **how the application reaches the service** — see [Choosing the embedded health-check probe](#choosing-the-embedded-health-check-probe). Defaults across every type: `enabled: true`, `timeoutMs: 5000`.
 
 `details` is **strict** — unknown fields are rejected, not ignored. Non-HTTP probe detail you can't model in the embedded probe (TCP `nc` checks, `aws sts`/CLI auth, JSON-body `ok`-field checks, header styles the probe types below don't cover) still belongs **only** in the Markdown docs. `details` has **no slot for auth mechanism / credential env vars** (beyond an internal system's `addressEnv` name) and **no runtime-vs-CI flag** — don't try to smuggle that into `details` or into `healthCheck`.
+
+### Vendor status page (`statusPageUrl`)
+
+`put_dependency` takes an optional sibling arg `statusPageUrl` — the vendor's **public status page** (e.g. `https://www.githubstatus.com`, `https://status.openai.com`). gloria stores it **once per vendor** (keyed on `provider`) and shows a "status ↗" link in the dependency row, so a human can jump straight to the vendor's incident page. It is **display-only metadata — not a health check**: do **not** put a status page in `endpoints` or `healthCheck` (the probe-selection rules above still say *never* probe a status page; that is unchanged).
+
+- Pass `statusPageUrl` only for **external SaaS** dependencies, and only when you actually know the vendor's status page. **Do not guess a URL** — omit it instead.
+- You usually don't need to supply it for popular vendors: gloria keeps a curated registry (GitHub, OpenAI, Anthropic, Cloudflare, Stripe, Slack, Resend, Clerk, Atlassian, Plivo, …) and backfills those automatically. Supply `statusPageUrl` mainly for **long-tail** vendors not in that set.
+- The curated value always wins, so a `statusPageUrl` you pass is only recorded when gloria has no entry yet for that `provider`.
 
 ### Choosing the embedded health-check probe
 
