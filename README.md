@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/gloria-logo.png" alt="gloria.dev" width="360">
+  <img src="./assets/gloria-wordmark.png" alt="gloria.dev" width="360">
 </p>
 
 <p align="center">
