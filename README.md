@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/gloria-wordmark.png" alt="gloria.dev" width="360">
+  <img src="./assets/gloria-logo.png" alt="gloria.dev" width="360">
 </p>
 
 <p align="center">
@@ -14,17 +14,19 @@ This is the plugin marketplace for **[gloria.dev](https://gloria.dev)**. One rep
 
 gloria.dev keeps an agent-written codebase aligned with intent. Agents write the code; gloria.dev makes sure it's the code you want. Each tool is driven by a project's own source code — continuously comparing what was actually built against what you intended, and surfacing where the two have drifted apart — so the picture stays current as the code changes.
 
-Its first shipping tool is **Canary** — dependency monitoring. Canary discovers every internal and external dependency a project relies on, turns each one into a continuous health check, and notifies you the moment a dependency goes down, starts erroring more than usual, or gets unexpectedly expensive — _before_ your users or your vendor tell you. More tools are on the way: token cost tracking, coding standards, a living PRD, feature mapping, a skill marketplace, sub-agent management, and log debugging.
+Its first shipping tool is **Canary** — dependency monitoring. Canary discovers every internal and external dependency a project relies on, turns each one into a continuous health check, and notifies you the moment a dependency goes down, starts erroring more than usual, or gets unexpectedly expensive — _before_ your users or your vendor tell you. It ships alongside a shared **skills library** (versioned, org-wide coding-agent skills) and **Doc Holiday** documentation tooling. More tools are on the way: token cost tracking, coding standards, a living PRD, feature mapping, sub-agent management, and log debugging.
 
 ## What's in the `gloria` plugin
 
-Installing the plugin gives your agent three skills and wires up the hosted MCP server.
+Installing the plugin gives your agent five skills and wires up the hosted MCP server.
 
-| Skill                                  | What it does                                                                                                                      |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **`documenting-service-dependencies`** | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary. |
-| **`identifying-skills-for-a-project`** | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                        |
-| **`using-the-skills-library`**         | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.      |
+| Skill                                    | What it does                                                                                                                      |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **`documenting-service-dependencies`**   | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary. |
+| **`identifying-skills-for-a-project`**   | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                        |
+| **`using-the-skills-library`**           | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.      |
+| **`defining-the-documentation-site-map`** | Scans the source and emits a Diátaxis-organized documentation site map plus a per-page content plan and a Mermaid hierarchy.     |
+| **`writing-doc-holiday-prompts`**        | Turns that site map into ready-to-run `@doc.holiday` create/update prompts, plus reusable Instruction Library entries.            |
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
 
@@ -61,7 +63,7 @@ OpenCode has no marketplace — add gloria.dev as a plugin in your `opencode.jso
 { "plugin": ["gloria@git+https://github.com/sandgardenhq/gloria.git"] }
 ```
 
-OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.1.7`).
+OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.1.9`).
 
 ## Once installed
 
