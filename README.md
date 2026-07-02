@@ -18,15 +18,16 @@ Its first shipping tool is **Canary** — dependency monitoring. Canary discover
 
 ## What's in the `gloria` plugin
 
-Installing the plugin gives your agent five skills and wires up the hosted MCP server.
+Installing the plugin gives your agent six skills and wires up the hosted MCP server.
 
-| Skill                                    | What it does                                                                                                                      |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **`documenting-service-dependencies`**   | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary. |
-| **`identifying-skills-for-a-project`**   | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                        |
-| **`using-the-skills-library`**           | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.      |
-| **`defining-the-documentation-site-map`** | Scans the source and emits a Diátaxis-organized documentation site map plus a per-page content plan and a Mermaid hierarchy.     |
-| **`writing-doc-holiday-prompts`**        | Turns that site map into ready-to-run `@doc.holiday` create/update prompts, plus reusable Instruction Library entries.            |
+| Skill                                     | What it does                                                                                                                      |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **`setting-up-gloria`**                   | Wires Gloria into a repo: writes the `.gloria/USING-GLORIA.md` agent playbook, adds a Gloria section to `CLAUDE.md`/`AGENTS.md`, and offers project registration. |
+| **`documenting-service-dependencies`**    | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary. |
+| **`identifying-skills-for-a-project`**    | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                        |
+| **`using-the-skills-library`**            | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.      |
+| **`defining-the-documentation-site-map`** | Scans the source and emits a Diátaxis-organized documentation site map plus a per-page content plan and a Mermaid hierarchy.      |
+| **`writing-doc-holiday-prompts`**         | Turns that site map into ready-to-run `@doc.holiday` create/update prompts, plus reusable Instruction Library entries.            |
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
 
@@ -67,7 +68,9 @@ OpenCode installs the plugin, which registers gloria.dev's skills and the remote
 
 ## Once installed
 
-Ask your agent to **document the project's service dependencies**. That invokes the `documenting-service-dependencies` skill, which produces the inventory and health-check definitions, then registers the resulting checks through the gloria.dev MCP server. From there, Canary runs the checks on a schedule and alerts you when a dependency drifts.
+First, ask your agent to **set up gloria in this repo**. That invokes the `setting-up-gloria` skill, which — with your permission — writes `.gloria/USING-GLORIA.md` (the playbook that tells every coding agent when to use Gloria's tools and skills), adds a short Gloria section to your `CLAUDE.md`/`AGENTS.md` pointing at it, and offers to register the project with gloria.dev. Re-run it after plugin updates to refresh the playbook.
+
+Then ask your agent to **document the project's service dependencies**. That invokes the `documenting-service-dependencies` skill, which produces the inventory and health-check definitions, then registers the resulting checks through the gloria.dev MCP server. From there, Canary runs the checks on a schedule and alerts you when a dependency drifts.
 
 ## Updating
 
