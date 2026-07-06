@@ -39,9 +39,10 @@ produces must cite a `ruleId` or `snippetId` from what this call returned.
 
 ### Step 1 — Metadata checks (every run, cheap)
 
-1. **Render staleness:** read the `<!-- gloria:standards v<M> -->` stamp in
-   `CLAUDE.md`/`AGENTS.md`. `M < N` (or no stamp while rules exist) → one `render_stale`
-   finding, detail naming both versions.
+1. **Render staleness:** the stamp `<!-- gloria:standards v<M> -->` may live in `CLAUDE.md`,
+   `AGENTS.md`, or a standalone file either of those points to (e.g. `CODING-STANDARDS.md`) —
+   check all three and take the highest `M` found. `M < N`, or no stamp found anywhere, → one
+   `render_stale` finding, detail naming both versions and which locations were checked.
 2. **Rule-evidence staleness:** for each rule, check whether its `evidence.sources` files
    changed since the rule's `updatedAt` (`git log -1 --format=%ct -- <file>`). Changed →
    `rule_stale` finding for that `ruleId`. The rule may still be right — staleness means

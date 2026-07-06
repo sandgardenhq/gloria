@@ -67,7 +67,7 @@ OpenCode has no marketplace — add gloria.dev as a plugin in your `opencode.jso
 { "plugin": ["gloria@git+https://github.com/sandgardenhq/gloria.git"] }
 ```
 
-OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.2.0`).
+OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.2.1`).
 
 ### Cursor
 
