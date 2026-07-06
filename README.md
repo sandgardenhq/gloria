@@ -18,7 +18,7 @@ Its first shipping tool is **Canary** — dependency monitoring. Canary discover
 
 ## What's in the `gloria` plugin
 
-Installing the plugin gives your agent six skills and wires up the hosted MCP server.
+Installing the plugin gives your agent nine skills and wires up the hosted MCP server.
 
 | Skill                                     | What it does                                                                                                                      |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -28,6 +28,9 @@ Installing the plugin gives your agent six skills and wires up the hosted MCP se
 | **`using-the-skills-library`**            | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.      |
 | **`defining-the-documentation-site-map`** | Scans the source and emits a Diátaxis-organized documentation site map plus a per-page content plan and a Mermaid hierarchy.      |
 | **`writing-doc-holiday-prompts`**         | Turns that site map into ready-to-run `@doc.holiday` create/update prompts, plus reusable Instruction Library entries.            |
+| **`extracting-coding-standards`**         | Derives rules and canonical snippets from a codebase's conventions and registers them with gloria's Coding Standards library.     |
+| **`using-coding-standards`**              | Write-time discipline: finds the canonical snippet for what you're about to write, adopts or adapts it, and leaves provenance.    |
+| **`checking-coding-standards`**           | Checks code against a project's registered Coding Standards — diff-scoped, metadata, or full-audit — and reports drift findings.  |
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
 
@@ -64,7 +67,7 @@ OpenCode has no marketplace — add gloria.dev as a plugin in your `opencode.jso
 { "plugin": ["gloria@git+https://github.com/sandgardenhq/gloria.git"] }
 ```
 
-OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.1.10`).
+OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.1.11`).
 
 ## Once installed
 
