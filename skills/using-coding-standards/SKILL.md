@@ -41,12 +41,12 @@ migration"). The search ladders exact → contains → fuzzy, so a short natural
 
 ### Step 2 — Decide on the ladder
 
-| Match | Action |
-| --- | --- |
-| **Strong match** — the snippet is the shape you need | Adopt it. Fill every `TODO:` placeholder. Marker: `(verbatim)` |
-| **Partial match** — right pattern, needs structural adaptation | Adapt it. Keep the structural skeleton, change what must change, fill every placeholder. Marker: `(adapted)` |
-| **No match, but the shape will recur** | Write it well, then contribute it back: `put_snippet` with placeholders and linked `ruleIds` (ask the user before publishing) |
-| **No match, genuinely one-off** | Write normally. No marker, no contribution |
+| Match                                                          | Action                                                                                                                        |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Strong match** — the snippet is the shape you need           | Adopt it. Fill every `TODO:` placeholder. Marker: `(verbatim)`                                                                |
+| **Partial match** — right pattern, needs structural adaptation | Adapt it. Keep the structural skeleton, change what must change, fill every placeholder. Marker: `(adapted)`                  |
+| **No match, but the shape will recur**                         | Write it well, then contribute it back: `put_snippet` with placeholders and linked `ruleIds` (ask the user before publishing) |
+| **No match, genuinely one-off**                                | Write normally. No marker, no contribution                                                                                    |
 
 Never leave a `TODO:` placeholder unfilled in committed code — placeholders are the snippet's
 customization points, and an unfilled one means the adaptation is incomplete.
@@ -89,14 +89,14 @@ checker treats it as intent, not drift. **`enforced` rules have no such escape h
 
 ## Common Mistakes
 
-| Mistake | Fix |
-| --- | --- |
+| Mistake                                        | Fix                                                                        |
+| ---------------------------------------------- | -------------------------------------------------------------------------- |
 | Writing the pattern from memory, then checking | `find_snippets` first — the snippet may encode decisions you'd re-litigate |
-| Adopting without filling placeholders | Every `TODO:` filled before the code is done |
-| Marker on the wrong granularity | Mark the unit the snippet produced, not the whole file it lives in |
-| Claiming `(verbatim)` after structural edits | Structural change = `(adapted)`; the checker compares faithfulness |
-| Silent divergence from a strong match | One comment line saying why; silence reads as unattributed duplication |
-| Contributing one-off code as a snippet | Contribute only shapes that will recur; ask the user before `put_snippet` |
+| Adopting without filling placeholders          | Every `TODO:` filled before the code is done                               |
+| Marker on the wrong granularity                | Mark the unit the snippet produced, not the whole file it lives in         |
+| Claiming `(verbatim)` after structural edits   | Structural change = `(adapted)`; the checker compares faithfulness         |
+| Silent divergence from a strong match          | One comment line saying why; silence reads as unattributed duplication     |
+| Contributing one-off code as a snippet         | Contribute only shapes that will recur; ask the user before `put_snippet`  |
 
 ## Quality Checklist
 

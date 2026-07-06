@@ -46,10 +46,10 @@ When in doubt, **trace the call** to where the URL is actually requested or the 
 **First-party platform services are internal even when reached over the provider's public API.** Identify the app's host platform first (Cloudflare Workers, AWS/ECS/Lambda, GCP, Azure, Vercel, Fly.io, …); its own managed services are infrastructure, not third-party SaaS, regardless of the URL they're reached at:
 
 - **AWS app** → S3, KMS, Secrets Manager, CloudWatch, Bedrock, SQS — internal (whether via an IAM-role/in-VPC endpoint **or** the public AWS API).
-- **Cloudflare app** → D1, R2, KV, Queues, **Secrets Store**, Workers AI — internal **even when called via `https://api.cloudflare.com/client/v4/...`**. That host is Cloudflare's control plane for *your own* resources; managing your own secret store there is the Cloudflare counterpart of AWS Secrets Manager (which this skill already treats as internal), not a third-party API you're a customer of.
+- **Cloudflare app** → D1, R2, KV, Queues, **Secrets Store**, Workers AI — internal **even when called via `https://api.cloudflare.com/client/v4/...`**. That host is Cloudflare's control plane for _your own_ resources; managing your own secret store there is the Cloudflare counterpart of AWS Secrets Manager (which this skill already treats as internal), not a third-party API you're a customer of.
 - **GCP / Azure / Vercel / Fly.io / …** → the same: the platform's own datastore, secret, storage, and queue services are internal.
 
-The deciding question is **ownership, not URL**: are you calling the **management/control plane of a resource that belongs to you on your own platform** (→ internal), or a **separate product you're a customer of** (→ external)? A public, different-domain URL alone does **not** make something external — `api.cloudflare.com` for *your* secret store is internal; `api.stripe.com` for Stripe's product is external. When a single managed cloud genuinely has both faces (a product you also consume independently of your own deployment), split it and note the ambiguity; otherwise classify by ownership and by _how the app reaches it in production_.
+The deciding question is **ownership, not URL**: are you calling the **management/control plane of a resource that belongs to you on your own platform** (→ internal), or a **separate product you're a customer of** (→ external)? A public, different-domain URL alone does **not** make something external — `api.cloudflare.com` for _your_ secret store is internal; `api.stripe.com` for Stripe's product is external. When a single managed cloud genuinely has both faces (a product you also consume independently of your own deployment), split it and note the ambiguity; otherwise classify by ownership and by _how the app reaches it in production_.
 
 ## Process
 
@@ -110,16 +110,16 @@ gloria.dev runs a remote **MCP server** that lets a coding agent push the invent
 
 All tools act on your session's active org; none take an `orgSlug`.
 
-| Tool                 | Args                                  | Does                                                            | Perm              |
-| -------------------- | ------------------------------------- | -------------------------------------------------------------- | ----------------- |
-| `get_info`           | `{}`                                  | Return org `{ id, name, slug }`. Use as an access sanity check. | `inventory:read`  |
-| `list_projects`      | `{}`                                  | List the org's projects.                                        | `inventory:read`  |
-| `register_project`   | `{ project }`                         | Upsert a project by slug.                                       | `inventory:write` |
-| `list_dependencies`  | `{ projectSlug }`                     | List a project's dependencies as summaries.                    | `inventory:read`  |
-| `get_dependency`     | `{ projectSlug, slug }`               | Return one dependency's full detail.                           | `inventory:read`  |
-| `put_dependency`     | `{ projectSlug, dependency, statusPageUrl? }` | Upsert one dependency by slug. Project must already exist. `statusPageUrl` optional — see below. | `inventory:write` |
-| `delete_dependency`  | `{ projectSlug, slug }`               | Remove a dependency by slug. Idempotent (missing = success).    | `inventory:write` |
-| `put_document`       | `{ projectSlug, document }`           | Upsert a Markdown doc by name. Project must already exist.      | `inventory:write` |
+| Tool                | Args                                          | Does                                                                                             | Perm              |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
+| `get_info`          | `{}`                                          | Return org `{ id, name, slug }`. Use as an access sanity check.                                  | `inventory:read`  |
+| `list_projects`     | `{}`                                          | List the org's projects.                                                                         | `inventory:read`  |
+| `register_project`  | `{ project }`                                 | Upsert a project by slug.                                                                        | `inventory:write` |
+| `list_dependencies` | `{ projectSlug }`                             | List a project's dependencies as summaries.                                                      | `inventory:read`  |
+| `get_dependency`    | `{ projectSlug, slug }`                       | Return one dependency's full detail.                                                             | `inventory:read`  |
+| `put_dependency`    | `{ projectSlug, dependency, statusPageUrl? }` | Upsert one dependency by slug. Project must already exist. `statusPageUrl` optional — see below. | `inventory:write` |
+| `delete_dependency` | `{ projectSlug, slug }`                       | Remove a dependency by slug. Idempotent (missing = success).                                     | `inventory:write` |
+| `put_document`      | `{ projectSlug, document }`                   | Upsert a Markdown doc by name. Project must already exist.                                       | `inventory:write` |
 
 ### Payload shapes
 
@@ -128,7 +128,12 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 `project`:
 
 ```jsonc
-{ "slug": "acme-api", "name": "Acme API", "description": "…", "repoUrl": "https://github.com/acme/api" } // repoUrl optional
+{
+  "slug": "acme-api",
+  "name": "Acme API",
+  "description": "…",
+  "repoUrl": "https://github.com/acme/api",
+} // repoUrl optional
 ```
 
 `slug` and `name` are required; `description` and `repoUrl` are optional. `description` is **backfilled from what you learned while exploring** (a one-or-two-sentence summary of what the project is and does) when the project has none — but an existing non-empty description is **never overwritten without the user's consent**. See [Resolving the project](#resolving-the-project).
@@ -137,14 +142,18 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 ```jsonc
 {
-  "kind": "external_saas",          // or "internal_system"
+  "kind": "external_saas", // or "internal_system"
   "slug": "github",
   "name": "GitHub",
-  "category": "git_hosting",        // enum, see below
+  "category": "git_hosting", // enum, see below
   "purpose": "How the app uses it.",
   "endpoints": [{ "label": "REST API", "url": "https://api.github.com" }],
-  "details": { /* kind-specific, see below */ },
-  "healthCheck": { /* optional probe gloria.dev runs on a schedule — pick the TYPE from how the code uses the service; see "Choosing the embedded health-check probe" */ }
+  "details": {
+    /* kind-specific, see below */
+  },
+  "healthCheck": {
+    /* optional probe gloria.dev runs on a schedule — pick the TYPE from how the code uses the service; see "Choosing the embedded health-check probe" */
+  },
 }
 ```
 
@@ -157,7 +166,7 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 ### Vendor status page (`statusPageUrl`)
 
-`put_dependency` takes an optional sibling arg `statusPageUrl` — the vendor's **public status page** (e.g. `https://www.githubstatus.com`, `https://status.openai.com`). gloria stores it **once per vendor** (keyed on `provider`) and shows a "status ↗" link in the dependency row, so a human can jump straight to the vendor's incident page. It is **display-only metadata — not a health check**: do **not** put a status page in `endpoints` or `healthCheck` (the probe-selection rules above still say *never* probe a status page; that is unchanged).
+`put_dependency` takes an optional sibling arg `statusPageUrl` — the vendor's **public status page** (e.g. `https://www.githubstatus.com`, `https://status.openai.com`). gloria stores it **once per vendor** (keyed on `provider`) and shows a "status ↗" link in the dependency row, so a human can jump straight to the vendor's incident page. It is **display-only metadata — not a health check**: do **not** put a status page in `endpoints` or `healthCheck` (the probe-selection rules above still say _never_ probe a status page; that is unchanged).
 
 - Pass `statusPageUrl` only for **external SaaS** dependencies, and only when you actually know the vendor's status page. **Do not guess a URL** — omit it instead.
 - You usually don't need to supply it for popular vendors: gloria keeps a curated registry (GitHub, OpenAI, Anthropic, Cloudflare, Stripe, Slack, Resend, Clerk, Atlassian, Plivo, …) and backfills those automatically. Supply `statusPageUrl` mainly for **long-tail** vendors not in that set.
@@ -167,22 +176,22 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 
 **Always probe authenticated whenever an authenticated check exists for the service.** An authenticated probe verifies **both** that the service is up **and** that your credentials still reach the real resource; an unauthenticated probe only proves the service is up. So an authenticated probe is the **default**, and an unauthenticated `http` probe is the **last resort** — valid only for a service that has **no authenticated check at all**: one the app calls with no credentials, against an endpoint that takes no token. **Read how the app authenticates to the service, then pick the matching probe type.** An unauthenticated probe against a resource that has credentials is a defect: it either can't see the real resource or returns a misleading status (a `401`/`404` reads as "up" to a probe that never sent a token), so the dependency looks healthy when your actual access is broken.
 
-**A public liveness endpoint *existing* is never a reason to skip authentication.** If the app reaches the service with a credential — or the service exposes an account / whoami / token-gated endpoint — use the authenticated probe against the real resource, **not** the public `/health` or status page. The public endpoint tells you the vendor is up; it tells you nothing about whether *your* access still works.
+**A public liveness endpoint _existing_ is never a reason to skip authentication.** If the app reaches the service with a credential — or the service exposes an account / whoami / token-gated endpoint — use the authenticated probe against the real resource, **not** the public `/health` or status page. The public endpoint tells you the vendor is up; it tells you nothing about whether _your_ access still works.
 
 The probe types an agent can sync through MCP are:
 
-| `type`          | Auth                | Fields (beyond the `enabled` / `timeoutMs` defaults)                                  | Use when                                                                                  |
-| --------------- | ------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `"http-bearer"` | **Bearer token**    | same as `http`, plus `token` (a secret — see below)                                   | **Default whenever it fits — but only when the service has no dedicated connector** (if one exists, the connector wins; omit `healthCheck`). The service is reachable with an `Authorization: Bearer …` token — the app holds a Bearer token for it (token-gated API, private resource). Prefer this over `http` whenever a Bearer-authenticated endpoint exists, **even if a public liveness endpoint also exists**. |
-| `"http"`        | **none**            | `url` (required); `method` (`GET`\|`HEAD`\|`POST`, default `GET`); `expectedStatus` (default `{min:200,max:299}`) | **Fallback only.** The service has **no authenticated check at all** — the app calls it with no credentials and it exposes no account / token-gated endpoint — but it does have a genuinely **public** liveness endpoint (`/health`, status page, or unauthenticated API root). |
+| `type`          | Auth             | Fields (beyond the `enabled` / `timeoutMs` defaults)                                                              | Use when                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"http-bearer"` | **Bearer token** | same as `http`, plus `token` (a secret — see below)                                                               | **Default whenever it fits — but only when the service has no dedicated connector** (if one exists, the connector wins; omit `healthCheck`). The service is reachable with an `Authorization: Bearer …` token — the app holds a Bearer token for it (token-gated API, private resource). Prefer this over `http` whenever a Bearer-authenticated endpoint exists, **even if a public liveness endpoint also exists**. |
+| `"http"`        | **none**         | `url` (required); `method` (`GET`\|`HEAD`\|`POST`, default `GET`); `expectedStatus` (default `{min:200,max:299}`) | **Fallback only.** The service has **no authenticated check at all** — the app calls it with no credentials and it exposes no account / token-gated endpoint — but it does have a genuinely **public** liveness endpoint (`/health`, status page, or unauthenticated API root).                                                                                                                                       |
 
-**The selection rule (a typed connector always wins; then authenticated beats unauthenticated):** First ask *does a dedicated typed connector exist for this service* — see the list under [When neither embedded type fits](#choosing-the-embedded-health-check-probe) below (GitHub, GitLab, Bitbucket, OpenAI, Anthropic, Notion, Linear, Slack, Clerk, Atlassian/Jira, AWS STS/KMS/Bedrock/CloudWatch Logs/Secrets Manager). If **yes**, the connector **always** wins: **omit `healthCheck`** entirely and steer the user to attach the connector in the web UI — **never** emit an embedded probe for that service, and above all **never** an unauthenticated `"http"` one, no matter what public endpoint it also exposes. Only when **no** connector exists do you reach for an embedded probe, and there authenticated wins: does the app hold a credential for the service, or does it offer an account / whoami / token-gated endpoint? If **yes**, use `"http-bearer"` against that endpoint (token declared as a secret), or, when the auth style can't be expressed as an embedded probe, omit `healthCheck`. Use `"http"` **only** when the answer to both is *no* — no connector, no credential, no authenticated endpoint. Concretely: if hitting the endpoint the app relies on *without* a credential would not prove your access works, do **not** use `"http"`. _Example: a vendor API your app calls with a Bearer token that has **no** dedicated connector — e.g. Resend. `https://api.resend.com` being reachable says nothing about whether your key still works, so probe an authenticated endpoint like `https://api.resend.com/domains` with `type: "http-bearer"` so a revoked/expired key surfaces as a real failure. (For a service that **does** have a connector — a private GitHub repo, say — omit `healthCheck` and use the connector instead of any embedded probe.)_
+**The selection rule (a typed connector always wins; then authenticated beats unauthenticated):** First ask _does a dedicated typed connector exist for this service_ — see the list under [When neither embedded type fits](#choosing-the-embedded-health-check-probe) below (GitHub, GitLab, Bitbucket, OpenAI, Anthropic, Notion, Linear, Slack, Clerk, Atlassian/Jira, AWS STS/KMS/Bedrock/CloudWatch Logs/Secrets Manager). If **yes**, the connector **always** wins: **omit `healthCheck`** entirely and steer the user to attach the connector in the web UI — **never** emit an embedded probe for that service, and above all **never** an unauthenticated `"http"` one, no matter what public endpoint it also exposes. Only when **no** connector exists do you reach for an embedded probe, and there authenticated wins: does the app hold a credential for the service, or does it offer an account / whoami / token-gated endpoint? If **yes**, use `"http-bearer"` against that endpoint (token declared as a secret), or, when the auth style can't be expressed as an embedded probe, omit `healthCheck`. Use `"http"` **only** when the answer to both is _no_ — no connector, no credential, no authenticated endpoint. Concretely: if hitting the endpoint the app relies on _without_ a credential would not prove your access works, do **not** use `"http"`. _Example: a vendor API your app calls with a Bearer token that has **no** dedicated connector — e.g. Resend. `https://api.resend.com` being reachable says nothing about whether your key still works, so probe an authenticated endpoint like `https://api.resend.com/domains` with `type: "http-bearer"` so a revoked/expired key surfaces as a real failure. (For a service that **does** have a connector — a private GitHub repo, say — omit `healthCheck` and use the connector instead of any embedded probe.)_
 
-**Declaring the token (and never the value).** In `http-bearer`, set `token` to a bare secret **declaration** — `{ "kind": "secret", "hint": "GitHub PAT" }` — and nothing else. The agent **never** transmits a secret value, ref, or `configured` flag; strict validation rejects a stray `value`/`ref`/`configured`. gloria.dev mints the ref server-side, the user enters the value on the project's Configure-secrets page (the tool returns a `configUrl` deep-linked to the dependency), and the runner resolves it at probe time. Until the value is entered the dependency sits in `needs_config` and is not probed — that's expected, not a failure. (You *may* instead pass a literal `{ "kind": "literal", "value": "…" }` token, but **don't** — that hard-codes a secret; always declare it.)
+**Declaring the token (and never the value).** In `http-bearer`, set `token` to a bare secret **declaration** — `{ "kind": "secret", "hint": "GitHub PAT" }` — and nothing else. The agent **never** transmits a secret value, ref, or `configured` flag; strict validation rejects a stray `value`/`ref`/`configured`. gloria.dev mints the ref server-side, the user enters the value on the project's Configure-secrets page (the tool returns a `configUrl` deep-linked to the dependency), and the runner resolves it at probe time. Until the value is entered the dependency sits in `needs_config` and is not probed — that's expected, not a failure. (You _may_ instead pass a literal `{ "kind": "literal", "value": "…" }` token, but **don't** — that hard-codes a secret; always declare it.)
 
 **When neither embedded type fits — and connector precedence.** Some services authenticate in a way the embedded probe can't model: an **API-key header** (`x-api-key`, `PRIVATE-TOKEN`), **HTTP Basic**, **AWS SigV4**, or a vendor **SDK** call, and non-HTTP datastores (TCP-only). gloria.dev ships **dedicated authenticated connectors** for many of them — GitHub, GitLab, Bitbucket, OpenAI, Anthropic, Notion, Linear, Slack, Clerk, Atlassian/Jira, and AWS STS/KMS/Bedrock/CloudWatch Logs/Secrets Manager — each running a real authenticated probe in the web UI.
 
-**Whenever a dedicated connector exists for the service, the connector always wins** — even over an `http-bearer` probe you *could* express: **never** emit an embedded probe of any kind for that service, and **least of all** an unauthenticated `http` probe just because it also has a public endpoint. **Omit `healthCheck`**, keep the authenticated probe in the Markdown health-check doc, and tell the user to attach the connector in the web UI. The same holds for any service whose authenticated check the embedded probe can't express even without a named connector — omit `healthCheck` rather than downgrade to a misleading unauthenticated `http` probe. So in practice the agent-sync path emits only `http`/`http-bearer`: the server mints a secret for an `http-bearer` token, but it does **not** provision credentials for the connector probe types, so a connector-typed `healthCheck` synced over MCP can't become configurable — attach those connectors in the web UI instead. Richer connectors are a web-UI upgrade.
+**Whenever a dedicated connector exists for the service, the connector always wins** — even over an `http-bearer` probe you _could_ express: **never** emit an embedded probe of any kind for that service, and **least of all** an unauthenticated `http` probe just because it also has a public endpoint. **Omit `healthCheck`**, keep the authenticated probe in the Markdown health-check doc, and tell the user to attach the connector in the web UI. The same holds for any service whose authenticated check the embedded probe can't express even without a named connector — omit `healthCheck` rather than downgrade to a misleading unauthenticated `http` probe. So in practice the agent-sync path emits only `http`/`http-bearer`: the server mints a secret for an `http-bearer` token, but it does **not** provision credentials for the connector probe types, so a connector-typed `healthCheck` synced over MCP can't become configurable — attach those connectors in the web UI instead. Richer connectors are a web-UI upgrade.
 
 So `"http"` is reserved for a service with **none** of these: no Bearer-token endpoint, no dedicated connector, and no credential the app holds — a genuinely public, unauthenticated dependency.
 
@@ -204,7 +213,7 @@ So `"http"` is reserved for a service with **none** of these: no Bearer-token en
 
 ### Resolving the project
 
-`register_project` is an **upsert keyed by slug**, so it both creates a missing project and updates an existing one. Don't call it blindly — first work out *which* project this codebase is, and never clobber a description a human may have edited. Three phases:
+`register_project` is an **upsert keyed by slug**, so it both creates a missing project and updates an existing one. Don't call it blindly — first work out _which_ project this codebase is, and never clobber a description a human may have edited. Three phases:
 
 **1. Identify (from the git remote, with fallback).** Read `origin`'s URL.
 
@@ -216,11 +225,11 @@ So `"http"` is reserved for a service with **none** of these: no Bearer-token en
 - A project whose `slug` equals the derived slug → **that's the project** (exists).
 - Else, if the derived `repoUrl` is non-empty and some project's `repoUrl` equals it → **that's the project** (exists). The slug differs, so **keep using the existing project's slug** for every later call — don't fork a duplicate.
 - Else → **create**: `register_project` with the derived `slug` / `name` / `repoUrl`, silently (it's an idempotent upsert).
-- **Ambiguity:** if the slug matches one project but `repoUrl` matches a *different* one, prefer the **slug** match (it's the upsert key) and note the ambiguity in your final report — don't guess or create a third.
+- **Ambiguity:** if the slug matches one project but `repoUrl` matches a _different_ one, prefer the **slug** match (it's the upsert key) and note the ambiguity in your final report — don't guess or create a third.
 
 **3. Describe (backfill, or update only with consent).** Look at the resolved project's `description`:
 
-- **Just created, or existing with an empty/absent description** → write a **one-or-two-sentence** description (what the project *is* and does, drawn from what you learned while exploring — README, manifests, the dependency picture you just built) and set it. Backfill silently.
+- **Just created, or existing with an empty/absent description** → write a **one-or-two-sentence** description (what the project _is_ and does, drawn from what you learned while exploring — README, manifests, the dependency picture you just built) and set it. Backfill silently.
 - **Existing with a non-empty description** → **do not overwrite it silently.** Show the user the current description and your freshly-generated one and **ask whether to replace**; update only on consent. If you can't ask (non-interactive run), leave the existing description and note it in your report.
 
 When setting/updating the description on a project that already has a `name` / `repoUrl`, send those alongside `description` in the `register_project` call so the upsert doesn't blank them.
@@ -239,13 +248,13 @@ When setting/updating the description on a project that already has a `name` / `
 - ❌ Treating the gloria.dev sync as optional, or skipping it when the MCP server is connected — pushing the inventory is a required final step.
 - ❌ Asking for or passing an `orgSlug` — no tool takes one; the org comes from your authenticated session. If the session has no active org, surface the server's error instead of guessing.
 - ❌ Calling `put_dependency` or `put_document` before `register_project` for that project, or adding fields the `details` / `document` schema doesn't define (auth keys, runtime flags) — strict validation rejects them.
-- ❌ Emitting an unauthenticated `type: "http"` probe for a service that has **any** authenticated check — a private GitHub repo, an endpoint that `401`s without a token, **or a service the app reaches with a credential that *also* exposes a public `/health` / status page**. The public endpoint only proves the vendor is up, not that your access works, so the dependency looks healthy while your real access is broken. Use `type: "http-bearer"` (token declared as a secret) against an authenticated endpoint, or omit `healthCheck` and rely on a web-UI connector. Reserve `http` for services with **no** authenticated check at all. _Authenticated wins whenever one exists._
-- ❌ Emitting **any** embedded probe for a service that has a **dedicated authenticated connector** (GitHub, GitLab, Bitbucket, OpenAI, Anthropic, Notion, Linear, Slack, Clerk, Atlassian/Jira, AWS). If a connector exists it **always** wins — omit `healthCheck` and steer the user to it; never emit an `http-bearer` probe you *could* express, and **least of all** an unauthenticated `http` probe, just because the service also has a public or Bearer endpoint.
+- ❌ Emitting an unauthenticated `type: "http"` probe for a service that has **any** authenticated check — a private GitHub repo, an endpoint that `401`s without a token, **or a service the app reaches with a credential that _also_ exposes a public `/health` / status page**. The public endpoint only proves the vendor is up, not that your access works, so the dependency looks healthy while your real access is broken. Use `type: "http-bearer"` (token declared as a secret) against an authenticated endpoint, or omit `healthCheck` and rely on a web-UI connector. Reserve `http` for services with **no** authenticated check at all. _Authenticated wins whenever one exists._
+- ❌ Emitting **any** embedded probe for a service that has a **dedicated authenticated connector** (GitHub, GitLab, Bitbucket, OpenAI, Anthropic, Notion, Linear, Slack, Clerk, Atlassian/Jira, AWS). If a connector exists it **always** wins — omit `healthCheck` and steer the user to it; never emit an `http-bearer` probe you _could_ express, and **least of all** an unauthenticated `http` probe, just because the service also has a public or Bearer endpoint.
 - ❌ Putting a secret **value**, `ref`, or `configured` flag in a `http-bearer` token — declare only `{ "kind": "secret", "hint": "…" }`; the value is entered by the user in the web UI, never transmitted by the agent.
 - ❌ Overwriting an existing (possibly human-edited) project description without asking — backfill only when it's empty; otherwise get the user's consent.
 - ❌ Creating a duplicate project when one already exists under a different slug but the same `repoUrl` — match on `repoUrl` and reuse the existing project's slug.
 - ❌ Leaving a freshly-created or empty project with no description when your exploration yielded enough to write a one-or-two-sentence summary.
-- ❌ Expecting an MCP tool that *runs* health checks — the server stores the inventory and the Markdown docs (via `put_document`), but it never executes the curl probes.
+- ❌ Expecting an MCP tool that _runs_ health checks — the server stores the inventory and the Markdown docs (via `put_document`), but it never executes the curl probes.
 
 ## Reference Examples
 

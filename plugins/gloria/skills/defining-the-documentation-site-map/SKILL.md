@@ -13,10 +13,10 @@ It is a sibling to `documenting-service-dependencies` and `identifying-skills-fo
 
 **Core principle: derive the map from the code, classify every page into exactly one Diátaxis mode, and keep the four modes separate.** A site map invented from a template, or one where a page mixes modes, fails the job.
 
-| File                   | Contents                                                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| File                   | Contents                                                                                                                                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DOCS_SITE_MAP.md`     | The annotated content tree (sections + pages, each tagged with its Diátaxis mode and ordering), a **Reconciliation with the intended IA** note, a Mermaid hierarchy diagram, a Diátaxis-balance check, and a **Coverage gaps** section. |
-| `DOCS_CONTENT_PLAN.md` | One brief per page: mode, audience, the question it answers, an outline, and the **source-of-truth in the code** it must be reconciled against. |
+| `DOCS_CONTENT_PLAN.md` | One brief per page: mode, audience, the question it answers, an outline, and the **source-of-truth in the code** it must be reconciled against.                                                                                         |
 
 Generate **both by default** and cross-link them (the site map links to the plan; each brief's heading matches its tree entry). Emit `content/`-relative paths and Hugo-ready front matter so the plan drops into a Hugo site, while the tree itself stays generator-agnostic.
 
@@ -26,19 +26,19 @@ Generate **both by default** and cross-link them (the site map links to the plan
 
 Every proposed page is classified into **exactly one** of four modes. The mode is decided by the **user need** the page serves, not by its topic:
 
-| Mode            | Orientation   | Serves                                  | The page's job                                          |
-| --------------- | ------------- | --------------------------------------- | ------------------------------------------------------- |
-| **Tutorial**    | Learning      | A newcomer acquiring skills             | Teach through a guided, hand-held lesson with a guaranteed first success. |
-| **How-to**      | Tasks         | A competent user solving one real problem | Give the steps to achieve a specific goal; assume competence. |
-| **Reference**   | Information   | A user looking something up             | Describe the machinery accurately; austere, structured like the code/API. |
-| **Explanation** | Understanding | A user building a mental model          | Explain why, the design, the trade-offs; read-once orientation, no task. |
+| Mode            | Orientation   | Serves                                    | The page's job                                                            |
+| --------------- | ------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| **Tutorial**    | Learning      | A newcomer acquiring skills               | Teach through a guided, hand-held lesson with a guaranteed first success. |
+| **How-to**      | Tasks         | A competent user solving one real problem | Give the steps to achieve a specific goal; assume competence.             |
+| **Reference**   | Information   | A user looking something up               | Describe the machinery accurately; austere, structured like the code/API. |
+| **Explanation** | Understanding | A user building a mental model            | Explain why, the design, the trade-offs; read-once orientation, no task.  |
 
 ### The discriminators that prevent misclassification
 
 Most classification errors are tutorial↔how-to and reference↔explanation. Apply these tests:
 
-- **Tutorial vs. how-to.** A tutorial *teaches a beginner* via a curated lesson the author fully controls ("Run your first Canary check" — one blessed happy path, every step spelled out). A how-to *helps a competent user* accomplish a real task they bring ("Add the MCP server to your agent"). The same topic is usually a how-to; reserve tutorial for the one or two genuine first-success journeys. **A task done N times for N variants is N how-tos in one mode — never one tutorial and the rest how-tos.** (Baseline error to avoid: "Install on Claude Code" tagged tutorial while "Install on Codex" tagged how-to. They are the same need — both how-to, or fold into one how-to with per-agent steps.)
-- **Reference vs. explanation.** Reference *describes and lets you look up* — it maps to the structure of the code (a tool index, a Zod-schema/domain-model table, a route map, a glossary) and teaches nothing. Explanation *makes you understand* — the intent-vs-implementation model, an architecture overview, why the alert engine debounces. If it has a narrative and an opinion, it's explanation; if it's a lookup table, it's reference.
+- **Tutorial vs. how-to.** A tutorial _teaches a beginner_ via a curated lesson the author fully controls ("Run your first Canary check" — one blessed happy path, every step spelled out). A how-to _helps a competent user_ accomplish a real task they bring ("Add the MCP server to your agent"). The same topic is usually a how-to; reserve tutorial for the one or two genuine first-success journeys. **A task done N times for N variants is N how-tos in one mode — never one tutorial and the rest how-tos.** (Baseline error to avoid: "Install on Claude Code" tagged tutorial while "Install on Codex" tagged how-to. They are the same need — both how-to, or fold into one how-to with per-agent steps.)
+- **Reference vs. explanation.** Reference _describes and lets you look up_ — it maps to the structure of the code (a tool index, a Zod-schema/domain-model table, a route map, a glossary) and teaches nothing. Explanation _makes you understand_ — the intent-vs-implementation model, an architecture overview, why the alert engine debounces. If it has a narrative and an opinion, it's explanation; if it's a lookup table, it's reference.
 - **Section landing pages (`_index.md`) and "coming soon" stubs are explanation.** A landing page orients the reader to a section (read-once, no task, no lookup); a stub for an unshipped tool orients to a capability that doesn't exist yet. Both are `[E]`. They split into how-to/reference children as the section/tool fills in.
 
 ### Keep the four modes separate (enforce this)
@@ -55,9 +55,9 @@ Most classification errors are tutorial↔how-to and reference↔explanation. Ap
    - **Domain model & schemas:** Zod schemas, core types, the data model — these drive Reference pages.
    - **Configuration & setup:** install paths, env/bindings, auth, deploy — these drive Getting-started/How-to pages.
    - **Concepts & intent:** README/CLAUDE.md framing, the "why" — these drive Explanation pages.
-   Use parallel search agents for breadth. The recommendations must come from what the project actually is, not its stack name.
+     Use parallel search agents for breadth. The recommendations must come from what the project actually is, not its stack name.
 
-2. **Find the intended IA, and reconcile against it.** Before inventing structure, look for an already-intended information architecture — a hand-authored site map in an issue/PR/`docs/` design, an existing docs tree, the home-page navigation, the product's own sectioning. **If one exists, adopt its shape and reconcile your derived map against it**: cover every section it names, and for any place you add, drop, rename, or reorder, **say so and why** in a "Reconciliation with the intended IA" note. If none exists, derive the spine from the features in step 1 and state that you did. *(A common, durable shape for a multi-tool product is Overview → Getting started → Tools (one subsection per feature/tool) → Guides → Reference → Meta; adopt the project's own intended IA where it has one, and otherwise use a shape like this as a starting point.)*
+2. **Find the intended IA, and reconcile against it.** Before inventing structure, look for an already-intended information architecture — a hand-authored site map in an issue/PR/`docs/` design, an existing docs tree, the home-page navigation, the product's own sectioning. **If one exists, adopt its shape and reconcile your derived map against it**: cover every section it names, and for any place you add, drop, rename, or reorder, **say so and why** in a "Reconciliation with the intended IA" note. If none exists, derive the spine from the features in step 1 and state that you did. _(A common, durable shape for a multi-tool product is Overview → Getting started → Tools (one subsection per feature/tool) → Guides → Reference → Meta; adopt the project's own intended IA where it has one, and otherwise use a shape like this as a starting point.)_
 
 3. **Derive the site map.** A hierarchical tree of **sections → pages**. Make the product's distinct tools/features the **spine** (one section each); add cross-cutting sections for orientation (overview/concepts), onboarding (getting-started), cross-tool tasks (guides), lookups (reference), and meta. Tag **every page** with its Diátaxis mode and give it an integer **weight** for ordering within its section.
 
@@ -88,7 +88,7 @@ Most classification errors are tutorial↔how-to and reference↔explanation. Ap
    └── mcp-reference.md     MCP tools: list/get/put/delete dependency           [R]  weight: 50
    ```
 3. **Reconciliation with the intended IA** — a short note: which intended-IA source you used (or that none existed and you derived the spine), and a bullet per divergence (added / removed / renamed / reordered) with the reason.
-4. **`## Diátaxis balance`** — a count-per-mode table with a one-line read ("how-to-heavy is expected for operational tooling; the two tutorials are the only genuine first-success journeys"). A skew of *zero* tutorials, or everything tagged one mode, is a smell — note it.
+4. **`## Diátaxis balance`** — a count-per-mode table with a one-line read ("how-to-heavy is expected for operational tooling; the two tutorials are the only genuine first-success journeys"). A skew of _zero_ tutorials, or everything tagged one mode, is a smell — note it.
 5. **`## Coverage gaps`** — the step-5 list.
 6. **`## Hierarchy`** — a **Mermaid `graph TD`** of sections → pages (mode in each node label), consistent with the diagrams the sibling skills emit.
 

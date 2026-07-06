@@ -106,15 +106,15 @@ by type, the specific findings with file:line, and what auto-resolved.
 
 ## Common Mistakes
 
-| Mistake | Fix |
-| --- | --- |
-| Findings with no rule/snippet id | Guardrail 1: drop them; if the concern is real, propose a new rule instead |
-| Flagging documented divergence | Read the adjacent comment; `observed`/snippet divergence with a reason is intent |
-| Flagging uncovered languages/patterns | No coverage → no finding |
-| Fixing violations in the same run | Read-only; report, then fix only on explicit request |
-| Skipping the report because findings were empty | Empty reports resolve stale findings and feed last-checked |
-| Diff runs re-reporting old, unchanged findings | Diff scope evaluates changed code; the ledger dedups by key, but keep detail current |
-| Treating rule_stale as "rule is wrong" | It means "evidence changed — re-derive and confirm" |
+| Mistake                                         | Fix                                                                                  |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Findings with no rule/snippet id                | Guardrail 1: drop them; if the concern is real, propose a new rule instead           |
+| Flagging documented divergence                  | Read the adjacent comment; `observed`/snippet divergence with a reason is intent     |
+| Flagging uncovered languages/patterns           | No coverage → no finding                                                             |
+| Fixing violations in the same run               | Read-only; report, then fix only on explicit request                                 |
+| Skipping the report because findings were empty | Empty reports resolve stale findings and feed last-checked                           |
+| Diff runs re-reporting old, unchanged findings  | Diff scope evaluates changed code; the ledger dedups by key, but keep detail current |
+| Treating rule_stale as "rule is wrong"          | It means "evidence changed — re-derive and confirm"                                  |
 
 ## Quality Checklist
 

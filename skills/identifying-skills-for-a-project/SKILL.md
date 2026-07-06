@@ -28,13 +28,13 @@ Not for: documenting service dependencies (use `documenting-service-dependencies
 
 Classify every skill into exactly one — this is the spine of the report:
 
-| Bucket | Meaning | Action |
-|--------|---------|--------|
-| **In play** | Available to this project today | Report it. Nothing to publish. |
-| **Useful — already in the library** | A recommended skill the org already has | Reuse / install. Don't duplicate. |
-| **Useful — missing** | A recommended skill not yet in the library | Copy an available bundle, or author one, then publish. |
+| Bucket                              | Meaning                                    | Action                                                 |
+| ----------------------------------- | ------------------------------------------ | ------------------------------------------------------ |
+| **In play**                         | Available to this project today            | Report it. Nothing to publish.                         |
+| **Useful — already in the library** | A recommended skill the org already has    | Reuse / install. Don't duplicate.                      |
+| **Useful — missing**                | A recommended skill not yet in the library | Copy an available bundle, or author one, then publish. |
 
-**"Available in your session" is not the same as "in use by the project."** A skill the project's `.claude/` or `CLAUDE.md` references is in use; a skill merely present in your session is only *available*. Report them distinctly.
+**"Available in your session" is not the same as "in use by the project."** A skill the project's `.claude/` or `CLAUDE.md` references is in use; a skill merely present in your session is only _available_. Report them distinctly.
 
 ## Process
 
@@ -46,7 +46,7 @@ From three concrete signals:
 - **`.claude/` config** — `.claude/skills/` (installed local skills), and `.claude/settings.json` / `settings.local.json` for enabled **plugins / marketplaces** (skills the org already gets wholesale — e.g. a `superpowers` plugin) and `.mcp.json` servers.
 - **`CLAUDE.md`** (root and nested) — skills and runbooks it names or implies.
 
-Separate *in-use* (referenced by config/CLAUDE.md) from *merely available* (in your session only).
+Separate _in-use_ (referenced by config/CLAUDE.md) from _merely available_ (in your session only).
 
 ### 2. Profile the project
 
@@ -65,19 +65,19 @@ Rank: strong (publish) vs. propose-and-ask (thinner / opinionated / overlapping)
 
 ### 4. Check the library before proposing anything missing
 
-Per `using-the-skills-library`: `search_skills` with **2–3 synonym queries** per candidate (the substring query matches name/description only), **and** narrow with the `tags` filter (AND semantics) to catch relevant skills a substring query would miss — a no-args `search_skills` lists every skill and surfaces the tags already in use. `get_skill` on near-matches to read scope. A match → move it to the *already-in-library* bucket. This is what prevents duplicate publishes.
+Per `using-the-skills-library`: `search_skills` with **2–3 synonym queries** per candidate (the substring query matches name/description only), **and** narrow with the `tags` filter (AND semantics) to catch relevant skills a substring query would miss — a no-args `search_skills` lists every skill and surfaces the tags already in use. `get_skill` on near-matches to read scope. A match → move it to the _already-in-library_ bucket. This is what prevents duplicate publishes.
 
-Remember the org ships **pre-seeded with gloria.dev system skills** (read-only, author `gloria.dev`). They're a third "already covered" source alongside the enabled plugins/marketplaces from step 1 — a candidate satisfied by a seeded system skill belongs in *already-in-library*, not *missing*, and must not be re-authored (a republish over a system skill is rejected with `409`).
+Remember the org ships **pre-seeded with gloria.dev system skills** (read-only, author `gloria.dev`). They're a third "already covered" source alongside the enabled plugins/marketplaces from step 1 — a candidate satisfied by a seeded system skill belongs in _already-in-library_, not _missing_, and must not be re-authored (a republish over a system skill is rejected with `409`).
 
 ### 5. Assemble each missing-but-useful bundle
 
 Three ways to produce a bundle — prefer the cheapest that fits:
 
-| Path | When | How |
-|------|------|-----|
-| **Reuse** | Already in the library | Nothing to assemble — just install (step 7). |
-| **Copy** | A good bundle exists on disk (an available session/local skill the library lacks and you're allowed to share) | Locate its `SKILL.md` + supporting files (search `~/.claude/skills`, `.claude/skills`, plugin caches) and copy the files verbatim into staging. Scrub anything project-specific. |
-| **Author** | No suitable source exists | Write a new bundle via `writing-skills`, grounded in the step-2 evidence. |
+| Path       | When                                                                                                          | How                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Reuse**  | Already in the library                                                                                        | Nothing to assemble — just install (step 7).                                                                                                                                     |
+| **Copy**   | A good bundle exists on disk (an available session/local skill the library lacks and you're allowed to share) | Locate its `SKILL.md` + supporting files (search `~/.claude/skills`, `.claude/skills`, plugin caches) and copy the files verbatim into staging. Scrub anything project-specific. |
+| **Author** | No suitable source exists                                                                                     | Write a new bundle via `writing-skills`, grounded in the step-2 evidence.                                                                                                        |
 
 Stage bundle files under the workspace's gitignored **`.context/skills/<slug>/`** so nothing lands in the project's git tree by accident.
 

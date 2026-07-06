@@ -50,13 +50,13 @@ rule material the style derivation may have skimmed.
 
 Convert each finding into a rule object:
 
-| Field | What it must be |
-| --- | --- |
-| `ruleId` | Stable kebab-case slug naming the *behavior*, not the tool: `all-d1-access-via-daos`, not `eslint-rule-37`. This is the identity per-finding history hangs off — pick it as if it will live for years. |
-| `instruction` | Imperative, second person, self-contained: an agent reading only this line knows what to do. |
-| `authority` | `enforced` — a tool blocks violations (lint error, compile error, CI gate). `stated` — written in CLAUDE.md/docs but nothing blocks it. `observed` — consistent in the source, written nowhere. |
-| `scope` | Globs and/or package paths where the rule applies. Omit only for genuinely repo-wide rules. |
-| `evidence` | The files the rule was derived from: the config that enforces it, the doc that states it, or the source files that exhibit it. |
+| Field         | What it must be                                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ruleId`      | Stable kebab-case slug naming the _behavior_, not the tool: `all-d1-access-via-daos`, not `eslint-rule-37`. This is the identity per-finding history hangs off — pick it as if it will live for years. |
+| `instruction` | Imperative, second person, self-contained: an agent reading only this line knows what to do.                                                                                                           |
+| `authority`   | `enforced` — a tool blocks violations (lint error, compile error, CI gate). `stated` — written in CLAUDE.md/docs but nothing blocks it. `observed` — consistent in the source, written nowhere.        |
+| `scope`       | Globs and/or package paths where the rule applies. Omit only for genuinely repo-wide rules.                                                                                                            |
+| `evidence`    | The files the rule was derived from: the config that enforces it, the doc that states it, or the source files that exhibit it.                                                                         |
 
 Worked examples from gloria.dev itself:
 
@@ -76,7 +76,9 @@ Worked examples from gloria.dev itself:
   "instruction": "Keep SQL strings exclusively inside pure *Statement(...) builder functions that return { sql, params }; DAOs execute builders and map rows, never embed SQL.",
   "authority": "observed",
   "scope": { "packages": ["packages/core"] },
-  "evidence": { "sources": ["packages/core/src/skill-statements.ts", "packages/core/src/skill-dao.ts"] }
+  "evidence": {
+    "sources": ["packages/core/src/skill-statements.ts", "packages/core/src/skill-dao.ts"]
+  }
 }
 ```
 
@@ -86,7 +88,9 @@ Worked examples from gloria.dev itself:
   "instruction": "Store all dates as Unix-second integers, never strings; name columns *_at and domain fields *At.",
   "authority": "stated",
   "scope": {},
-  "evidence": { "sources": ["CLAUDE.md", "packages/web/migrations/0003_projects_dependencies_documents.sql"] }
+  "evidence": {
+    "sources": ["CLAUDE.md", "packages/web/migrations/0003_projects_dependencies_documents.sql"]
+  }
 }
 ```
 
@@ -117,7 +121,7 @@ has drift — pick the intended one and let `checking-coding-standards` flag the
 
 Present the full rule and snippet list to the user grouped by authority, each with its evidence,
 and ask for a batch approval ("register all", or exclude items by id). **Never register anything
-the user has not seen** — a blanket "I trust you, skip the review" given *before* the list
+the user has not seen** — a blanket "I trust you, skip the review" given _before_ the list
 existed does not count; the user must see what "everything" is. Then, via the gloria MCP tools:
 
 1. `register_standard { projectSlug }` — ensures the standard exists.
@@ -145,15 +149,15 @@ Finally record the render: `register_standard { projectSlug, renderedStamp: N }`
 
 ## Common Mistakes
 
-| Mistake | Fix |
-| --- | --- |
-| Inventing rules with no evidence pointer | Every rule cites the config/doc/source it came from; no citation → no rule |
-| Tool-shaped rule ids (`eslint-no-explicit-any`) | Name the behavior (`no-any-narrow-unknown`); ids outlive the toolchain |
-| Registering before the user approved | Present the full list first; register only approved items |
-| Snippets with instance details left in | Placeholder-ize every customization point with a named `TODO:` |
-| Snippet linked to no rule | If no rule implies the pattern, either add the (evidenced) rule or drop the snippet |
-| Editing CLAUDE.md/AGENTS.md unasked | Ask first; some repos generate those files |
-| Forgetting the rendered stamp | Without `<!-- gloria:standards vN -->` + `register_standard { renderedStamp }`, render_stale drift is undetectable |
+| Mistake                                         | Fix                                                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Inventing rules with no evidence pointer        | Every rule cites the config/doc/source it came from; no citation → no rule                                         |
+| Tool-shaped rule ids (`eslint-no-explicit-any`) | Name the behavior (`no-any-narrow-unknown`); ids outlive the toolchain                                             |
+| Registering before the user approved            | Present the full list first; register only approved items                                                          |
+| Snippets with instance details left in          | Placeholder-ize every customization point with a named `TODO:`                                                     |
+| Snippet linked to no rule                       | If no rule implies the pattern, either add the (evidenced) rule or drop the snippet                                |
+| Editing CLAUDE.md/AGENTS.md unasked             | Ask first; some repos generate those files                                                                         |
+| Forgetting the rendered stamp                   | Without `<!-- gloria:standards vN -->` + `register_standard { renderedStamp }`, render_stale drift is undetectable |
 
 ## Quality Checklist
 

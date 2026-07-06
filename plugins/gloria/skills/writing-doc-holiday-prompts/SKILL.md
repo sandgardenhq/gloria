@@ -7,16 +7,16 @@ description: Use when you have a documentation site map / content plan and need 
 
 ## Overview
 
-Turn a documentation **site map + per-page content plan** into the concrete set of [**Doc Holiday**](https://doc.holiday/docs/) instructions that actually generate and maintain the docs site. This is the bridge between **planning** the docs and **producing** them: `defining-the-documentation-site-map` decides *what pages exist and what each should say*; this skill produces the *prompts that make Doc Holiday write them*.
+Turn a documentation **site map + per-page content plan** into the concrete set of [**Doc Holiday**](https://doc.holiday/docs/) instructions that actually generate and maintain the docs site. This is the bridge between **planning** the docs and **producing** them: `defining-the-documentation-site-map` decides _what pages exist and what each should say_; this skill produces the _prompts that make Doc Holiday write them_.
 
 It is a sibling to `defining-the-documentation-site-map`, `documenting-service-dependencies`, and `identifying-skills-for-a-project`: a Markdown skill that runs inside a coding agent, reads the codebase + the site-map artifacts, and emits filesystem Markdown — **no D1 dependency** for local/agent use.
 
 **Core principle: every prompt is anchored to a real source-of-truth in the code and carries its page's Diátaxis mode.** A scope-less prompt, or one that lets Doc Holiday guess the mode, fails the job — the point is that a reference page reads as reference and a tutorial reads as a tutorial, each reconciled against the code it describes.
 
-| File                              | Contents                                                                                                                                                            |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DOC_HOLIDAY_PROMPTS.md`          | The ordered, copy-paste prompt set, grouped by section to match the IA. Each prompt is annotated with its **page**, **Diátaxis mode**, **scope**, **target section/publication**, and **attached Instruction-Library slots**, and is split into a **create** prompt and a **maintenance (`update`)** prompt. |
-| `DOC_HOLIDAY_INSTRUCTION_LIBRARY.md` | The proposed reusable Instruction Library entries (brand voice, the intent-vs-implementation framing, one style entry per Diátaxis mode), each as paste-ready text with a note on **which slots/pages it attaches to**. |
+| File                                 | Contents                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DOC_HOLIDAY_PROMPTS.md`             | The ordered, copy-paste prompt set, grouped by section to match the IA. Each prompt is annotated with its **page**, **Diátaxis mode**, **scope**, **target section/publication**, and **attached Instruction-Library slots**, and is split into a **create** prompt and a **maintenance (`update`)** prompt. |
+| `DOC_HOLIDAY_INSTRUCTION_LIBRARY.md` | The proposed reusable Instruction Library entries (brand voice, the intent-vs-implementation framing, one style entry per Diátaxis mode), each as paste-ready text with a note on **which slots/pages it attaches to**.                                                                                      |
 
 Generate **both by default** and cross-link them (each prompt names the Instruction-Library entries it relies on; each entry lists the prompts/slots it serves).
 
@@ -31,8 +31,8 @@ Get the command format exactly right — these strings are run verbatim.
 - **Command categories** (this skill uses the first two):
   - **Create new documentation** — `@doc.holiday create new documentation about …`
   - **Update existing documentation** — `@doc.holiday update … `
-  - *(Create release notes is out of scope here.)*
-- **Scope** — every prompt (create **and** update) must name one: **file paths** (`/packages/mcp/`), a **commit range**, or the **current PR/MR context**. Pull the scope from the page's **Source of truth** field in the content plan. (A bare "time period" is *not* a valid page scope — it anchors to no source of truth and is release-notes-shaped, which is out of scope here.)
+  - _(Create release notes is out of scope here.)_
+- **Scope** — every prompt (create **and** update) must name one: **file paths** (`/packages/mcp/`), a **commit range**, or the **current PR/MR context**. Pull the scope from the page's **Source of truth** field in the content plan. (A bare "time period" is _not_ a valid page scope — it anchors to no source of truth and is release-notes-shaped, which is out of scope here.)
 - **Publications** — named documentation sets. A prompt targets a publication and a section path: `… for Publication "<name>"` landing at `<section/path>`.
 - **Slots & the Instruction Library** — reusable global instruction prompts saved once in the **Instruction Library** and linked to publication **slots**, so shared guidance (brand voice, per-mode style) is applied consistently without repeating it in every prompt. Factor cross-cutting guidance into entries; reference them from prompts — don't inline them.
 
@@ -61,16 +61,16 @@ Target **one Publication for the whole docs site** by default, with each page la
    - **Brand voice** — the project's voice/tone (from README/CLAUDE.md), attached to **every** slot.
    - **Intent-vs-implementation framing** — the gloria.dev "the code is the source of truth for what was built; hold it against what you intended" model, where the docs should reflect it.
    - **One style entry per Diátaxis mode** — tutorial / how-to / reference / explanation, each encoding that mode's job (a tutorial guarantees a first success; reference is austere and structured like the API; explanation is read-once understanding with no task; how-to assumes competence). These are what keep each page in its mode.
-   Note for each entry **which slots/pages it attaches to** (e.g. the reference-style entry → every `[R]` page's slot).
+     Note for each entry **which slots/pages it attaches to** (e.g. the reference-style entry → every `[R]` page's slot).
 
 4. **Map each page to a create prompt.** For every page in the plan, write:
-   `@doc.holiday create new documentation about <subject> in <scope>` — then the per-page guidance: its **Diátaxis mode**, **audience**, and **the question it answers**, the **target Publication *and* the page's `content/`-relative section path** (both are required — a Publication name without a landing path doesn't place the page), and the **Instruction-Library slots** to apply. Name the mode and attach its style slot; do **not** re-type the mode's style rules in the prompt — the mode and the per-page question come from the brief, the shared voice/style comes from the attached slots.
+   `@doc.holiday create new documentation about <subject> in <scope>` — then the per-page guidance: its **Diátaxis mode**, **audience**, and **the question it answers**, the **target Publication _and_ the page's `content/`-relative section path** (both are required — a Publication name without a landing path doesn't place the page), and the **Instruction-Library slots** to apply. Name the mode and attach its style slot; do **not** re-type the mode's style rules in the prompt — the mode and the per-page question come from the brief, the shared voice/style comes from the attached slots.
 
 5. **Handle coming-soon stubs.** For a page the site map marks `status: coming-soon` (a not-yet-shipped tool), emit a **lighter, explicitly-scoped stub prompt** — tell Doc Holiday to write a short placeholder that says the capability is coming and **not to invent feature content**. Never point a full "create new documentation" prompt at a tool that doesn't exist in code yet.
 
 6. **Sequence the prompts to the IA.** Order: **overview/explanation pages first**, then **per-tool sections** (in the site map's weight order), then **cross-cutting guides and reference last** — matching the site map's hierarchy so earlier pages exist before later ones link to them. Within the file, group by section. Collect every page you couldn't scope into an explicit **"Flagged — missing/ambiguous source of truth"** list at the top, so a human resolves them rather than them silently becoming bad prompts.
 
-7. **Emit the maintenance (`update`) prompts.** For **every** non-stub page, **always** emit the `@doc.holiday update …` prompt that re-reconciles it against the same scope as the code changes — this is unconditional, not optional. Additionally **wire automated triggers** (on merges/releases touching the page's source paths) so the reconciliation is ongoing per the docs' "maintained by Doc Holiday" goal — triggers are an *addition* to the update prompt, never a substitute for it. The update prompt must itself carry an explicit scope (`@doc.holiday update <page> from <commit-range/paths>`); a bare `update <page>` is scope-less and not allowed.
+7. **Emit the maintenance (`update`) prompts.** For **every** non-stub page, **always** emit the `@doc.holiday update …` prompt that re-reconciles it against the same scope as the code changes — this is unconditional, not optional. Additionally **wire automated triggers** (on merges/releases touching the page's source paths) so the reconciliation is ongoing per the docs' "maintained by Doc Holiday" goal — triggers are an _addition_ to the update prompt, never a substitute for it. The update prompt must itself carry an explicit scope (`@doc.holiday update <page> from <commit-range/paths>`); a bare `update <page>` is scope-less and not allowed.
 
 8. **Emit the two artifacts** (structures below), cross-linked.
 
@@ -83,7 +83,7 @@ Target **one Publication for the whole docs site** by default, with each page la
 3. **One `###` block per page, in IA order, grouped by section.** Each block:
 
    ````markdown
-   ### tools/canary/mcp-reference.md — MCP reference  [R]  weight: 50
+   ### tools/canary/mcp-reference.md — MCP reference [R] weight: 50
 
    - **Mode:** reference · **Audience:** an integrator wiring the MCP server.
    - **Question it answers:** "What MCP tools does Canary expose and what are their args?"
@@ -92,11 +92,13 @@ Target **one Publication for the whole docs site** by default, with each page la
    - **Slots:** brand-voice, reference-style.
 
    **Create**
+
    ```
    @doc.holiday create new documentation about the Canary MCP tools in /packages/mcp/ for Publication "gloria.dev docs", landing at tools/canary/mcp-reference.md. Write it as Diátaxis reference for an integrator wiring the MCP server, answering "what MCP tools does Canary expose and what are their args?". Apply the brand-voice and reference-style instruction slots (mode style comes from the slot, not this prompt).
    ```
 
    **Maintain**
+
    ```
    @doc.holiday update tools/canary/mcp-reference.md from changes in /packages/mcp/ — keep the tool index reconciled with the registered tool definitions.
    ```
@@ -106,6 +108,7 @@ Target **one Publication for the whole docs site** by default, with each page la
 
    ````markdown
    **Create (stub — tool not yet shipped)**
+
    ```
    @doc.holiday create new documentation about the planned "Cost Tracking" tool as a short coming-soon placeholder, landing at tools/cost-tracking/_index.md in Publication "gloria.dev docs". Say the capability is on the roadmap and do not invent feature details, commands, or APIs — there is no implementation to read yet.
    ```
@@ -132,7 +135,7 @@ Include at minimum: **brand voice** (attaches to every slot), **intent-vs-implem
 
 ## Common Mistakes
 
-- ❌ **Scope-less prompts.** A `create new documentation` *or* an `update` with no file paths / commit range / PR context. A bare `@doc.holiday update <page>` reads as self-scoping but isn't — every prompt's scope comes from the page's Source-of-truth field, no exceptions.
+- ❌ **Scope-less prompts.** A `create new documentation` _or_ an `update` with no file paths / commit range / PR context. A bare `@doc.holiday update <page>` reads as self-scoping but isn't — every prompt's scope comes from the page's Source-of-truth field, no exceptions.
 - ❌ **Publication named but no landing path.** Targeting `Publication "…"` without the page's `content/`-relative section path, so Doc Holiday can't place the page. Both are required on every create prompt.
 - ❌ **Inventing a page or its scope.** Building a prompt for a page that isn't in the content plan, or widening scope to "the whole repo" to cover an unknown source of truth. Flag it instead.
 - ❌ **Dropping the Diátaxis mode.** Letting Doc Holiday decide the mode, so a reference page comes back as a tutorial. The mode (and the question it answers) must ride in every prompt.
