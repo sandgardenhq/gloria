@@ -8,7 +8,7 @@
 
 ---
 
-This is the plugin marketplace for **[gloria.dev](https://gloria.dev)**. One repo serves multiple coding agents — [Claude Code](https://docs.claude.com/en/docs/claude-code/plugins), [OpenAI Codex](https://developers.openai.com/codex/plugins), [OpenCode](https://opencode.ai), and [Cursor](https://cursor.com) — from a single published source. Install the `gloria` plugin (or, for Cursor, connect manually) and your agent gets gloria.dev's skills plus the hosted gloria.dev MCP server.
+This is the plugin marketplace for **[gloria.dev](https://gloria.dev)**. One repo serves multiple coding agents — [Claude Code](https://docs.claude.com/en/docs/claude-code/plugins), [OpenAI Codex](https://developers.openai.com/codex/plugins), [OpenCode](https://opencode.ai), and [Cursor](https://cursor.com) — from a single published source. Install the `gloria` plugin and your agent gets gloria.dev's skills plus the hosted gloria.dev MCP server.
 
 ## What is gloria.dev?
 
@@ -18,7 +18,7 @@ Its first shipping tool is **Canary** — dependency monitoring. Canary discover
 
 ## What's in the `gloria` plugin
 
-Installing the plugin gives your agent ten skills and wires up the hosted MCP server. (Cursor has no plugin installer — see its section below for the two-step manual install.)
+Installing the plugin gives your agent ten skills and wires up the hosted MCP server. (Cursor's marketplace has no individual-user self-service install command yet — see its section below for the working-today local-plugin install.)
 
 | Skill                                     | What it does                                                                                                                                                                                                      |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -72,22 +72,17 @@ OpenCode installs the plugin, which registers gloria.dev's skills and the remote
 
 ### Cursor
 
-Cursor has no plugin marketplace — the MCP server and the skills are two separate manual steps.
-
-**MCP server** — add to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global):
-
-```json
-{ "mcpServers": { "gloria": { "url": "https://mcp.gloria.dev/mcp" } } }
-```
-
-The first tool call opens a one-time browser sign-in.
-
-**Skills** — Cursor discovers [Agent Skills](https://agentskills.io) from `.cursor/skills/` / `.agents/skills/` (project) or their `~/`-prefixed global equivalents. Clone this repo and copy the skills in:
+Cursor shipped its own plugin marketplace in February 2026 (Cursor 2.5), and this repo ships a real Cursor plugin (`.cursor-plugin/`) bundling the same skills and MCP server as the Claude/Codex plugin. Cursor has no individual-user self-service "add a marketplace repo" command yet, so clone this repo and symlink the plugin into Cursor's local plugins directory — Cursor auto-loads the bundled MCP server and skills from one manifest:
 
 ```bash
-git clone https://github.com/sandgardenhq/gloria.git /tmp/gloria
-mkdir -p .agents/skills && cp -R /tmp/gloria/skills/. .agents/skills/
+git -C ~/.cursor/plugins/sources/gloria pull || git clone https://github.com/sandgardenhq/gloria.git ~/.cursor/plugins/sources/gloria
+mkdir -p ~/.cursor/plugins/local
+ln -sf ~/.cursor/plugins/sources/gloria/plugins/gloria ~/.cursor/plugins/local/gloria
 ```
+
+Open Cursor's Customize sidebar → Plugins and enable **gloria** if it isn't already on. The first MCP call opens a one-time browser sign-in. The clone lives under `~/.cursor/plugins/sources/` (not `/tmp`) so the symlink survives reboots, and the command above is safe to re-run any time.
+
+If your org is on a Cursor Team or Enterprise plan, an admin can instead import this repo once for everyone: Dashboard → Settings → Plugins → Team Marketplaces → Import → `sandgardenhq/gloria`.
 
 ## Once installed
 
@@ -97,12 +92,12 @@ Then ask your agent to **document the project's service dependencies**. That inv
 
 ## Updating
 
-| Agent        | Command                                                                                                  |
-| ------------ | -------------------------------------------------------------------------------------------------------- |
-| Claude Code  | `/plugin marketplace update gloria` then `/reload-plugins`                                               |
-| OpenAI Codex | `codex plugin marketplace upgrade gloria` (restart Codex)                                                |
-| OpenCode     | `rm -rf ~/.cache/opencode/node_modules/gloria` and restart                                               |
-| Cursor       | Re-clone (or `git pull`) and re-copy `skills/` into your skills directory; the MCP config rarely changes |
+| Agent        | Command                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Claude Code  | `/plugin marketplace update gloria` then `/reload-plugins`                                                               |
+| OpenAI Codex | `codex plugin marketplace upgrade gloria` (restart Codex)                                                                |
+| OpenCode     | `rm -rf ~/.cache/opencode/node_modules/gloria` and restart                                                               |
+| Cursor       | `git -C ~/.cursor/plugins/sources/gloria pull` — the symlink and Cursor's plugin loader pick up the change automatically |
 
 Third-party marketplaces have auto-update off by default in Claude Code — open `/plugin` → **Marketplaces** and enable auto-update for `gloria` to skip the manual step.
 
