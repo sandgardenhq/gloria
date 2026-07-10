@@ -16,6 +16,7 @@
     "observability"
   ],
   "skills": "./skills/",
+  "hooks": "./hooks/hooks.json",
   "mcpServers": "./.mcp-codex.json",
   "interface": {
     "displayName": "gloria.dev",

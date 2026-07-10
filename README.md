@@ -60,6 +60,8 @@ Then, inside Codex, run `/plugins` and install **gloria**. Finally, complete the
 codex mcp login gloria                             # in your shell
 ```
 
+Codex also ships a `SessionStart` hook that nudges you when a newer gloria plugin version is available — run `/hooks` inside Codex once after installing and trust it, or the nudge never fires.
+
 ### OpenCode
 
 OpenCode has no marketplace — add gloria.dev as a plugin in your `opencode.json` (global `~/.config/opencode/opencode.json` or a project-local `opencode.json`), then restart OpenCode:
