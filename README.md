@@ -32,6 +32,32 @@ Installing the plugin gives your agent seven skills and wires up the hosted MCP 
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
 
+### Token-usage tracking hooks (Claude Code)
+
+The plugin ships Claude Code hooks that feed gloria.dev's token cost tracking. On `Stop`/`SessionEnd` the collector syncs the session's own transcript; on `SessionStart` it sweeps this machine's local session stores (Claude Code, Codex, and OpenCode) for anything recorded since the last sweep.
+
+There is nothing to install: the first hook fire downloads a compiled collector binary for your platform (~50 MB, once per collector release) from this repo's GitHub Releases, verifies it against SHA-256 checksums pinned into the plugin at publish time, and caches it under `~/.gloria/bin/`. If the download can't complete (offline, unsupported platform), the hook exits silently and retries on a later session.
+
+**Privacy:** the collector transmits **token usage only** — model names, token counts, timestamps, session/request identifiers, a random per-machine identifier (a UUID minted locally, not your hostname), and the optional project id from your config. To extract those numbers it reads your local session files (which contain conversation content), but it never transmits message content, prompts, code, or file paths.
+
+**The hooks are inert until you configure them.** With no config present they exit 0 immediately (never interrupting your session) and log a one-line setup hint to `~/.gloria/collector.log`. Nothing is collected or sent.
+
+One-time setup:
+
+1. With the gloria MCP server connected, call the `enable_usage_tracking` tool (or run the `setting-up-gloria` skill, which drives it for you). It mints a write-only usage-ingest API key for your org — the secret appears once, in the tool result. Don't echo it into the chat.
+2. Create `~/.gloria/config.json` from that result:
+
+   ```json
+   {
+     "apiBaseUrl": "https://gloria.dev",
+     "ingestToken": "<ingestToken from the tool result>"
+   }
+   ```
+
+   An optional `"projectId"` attributes this machine's usage to one gloria project.
+
+From the next session on, the hooks report usage automatically. If the machine is offline, batches queue under `~/.gloria/` and drain on a later hook run.
+
 > **Looking for Doc Holiday?** The `writing-doc-holiday-prompts`, `defining-the-documentation-site-map`, and `capturing-documentation-screenshots` skills moved to their own marketplace, [`sandgardenhq/doc-holiday`](https://github.com/sandgardenhq/doc-holiday). Install it with `/plugin marketplace add sandgardenhq/doc-holiday` (Claude Code) — see that repo's README for every agent.
 
 ## Install

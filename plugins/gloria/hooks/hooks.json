@@ -1,11 +1,35 @@
 {
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v node >/dev/null 2>&1 && [ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.mjs\" ] && node \"${CLAUDE_PLUGIN_ROOT}/collector/stub.mjs\" hook-stop || true"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v node >/dev/null 2>&1 && [ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.mjs\" ] && node \"${CLAUDE_PLUGIN_ROOT}/collector/stub.mjs\" hook-stop || true"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-version.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "command -v node >/dev/null 2>&1 && [ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.mjs\" ] && node \"${CLAUDE_PLUGIN_ROOT}/collector/stub.mjs\" hook-session-start || true"
           }
         ]
       }

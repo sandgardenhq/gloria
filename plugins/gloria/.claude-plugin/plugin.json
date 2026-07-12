@@ -7,5 +7,6 @@
     "email": "britt@sandgarden.com"
   },
   "homepage": "https://gloria.dev",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json"
 }

@@ -102,10 +102,76 @@ If neither file exists, create `AGENTS.md` containing only the section
   repo URL). If none matches, offer to run `register_project`. Registration
   is optional — a "no" still completes setup.
 
-### 6. Report
+### 6. Offer token-usage tracking setup (optional)
+
+The gloria plugin ships Claude Code hooks that transmit **token usage only**
+(model names, token counts, timestamps, session ids, and a locally-minted
+random machine UUID — never message content, prompts, or code) to gloria.dev's
+cost tracking. They are inert until
+`~/.gloria/config.json` exists, so offer to set it up — a "no" still completes
+setup.
+
+If the user says yes:
+
+1. Call the `gloria` MCP tool **`enable_usage_tracking`** (optionally passing
+   `machineLabel`, e.g. the machine's hostname, if the user consents to
+   naming the key). It mints a write-only, org-scoped Clerk API key and
+   returns `{ apiBaseUrl, ingestToken }` plus write instructions.
+2. Write `~/.gloria/config.json` (per-machine, not per-repo) directly from
+   the tool result — merge with any existing keys in the file:
+
+   ```json
+   {
+     "apiBaseUrl": "<apiBaseUrl from the tool result>",
+     "ingestToken": "<ingestToken from the tool result>"
+   }
+   ```
+
+   **Never echo the `ingestToken` into the conversation, logs, or any other
+   file** — write it straight to the config file. The secret is shown exactly
+   once; a compromised or lost key is revoked from the Clerk organization
+   settings, and re-running the tool mints a fresh one.
+
+   An optional `"projectId"` attributes the machine's usage to one gloria
+   project. The collector needs no runtime install: the plugin's first hook
+   fire downloads a compiled, checksum-verified collector binary for this
+   platform (~50 MB, once per collector release) and caches it under
+   `~/.gloria/bin/`.
+
+   **Manual fallback (MCP not connected on this machine):** any org member
+   can mint the key from a machine that _does_ have the gloria MCP server
+   connected (the credential is per-machine, so mint one per machine), or an
+   org admin can create an API key with scope `usage:ingest` for the
+   organization in Clerk and supply it the same way. Have the user write the
+   file themselves — never ask them to paste the secret into the chat.
+
+From the next Claude Code session on, the plugin's hooks report usage
+automatically — and the session-start sweep also collects **Codex and
+OpenCode** usage from this machine's local session stores, so no further
+wiring is needed when Claude Code runs here regularly.
+
+**Codex / OpenCode without Claude Code (manual, for now):** the collector
+supports both, but only Claude Code auto-wires hooks through the plugin today.
+To trigger sweeps from Codex directly, point `notify` in `~/.codex/config.toml`
+at the collector download stub from the installed plugin (or a clone of the
+published repo, `plugins/gloria/collector/stub.mjs`) — the stub downloads and
+caches the compiled collector binary for Codex-only machines too:
+
+```toml
+notify = ["node", "/path/to/plugins/gloria/collector/stub.mjs", "hook-session-start"]
+```
+
+(The collector accepts and ignores Codex's JSON argv payload.) OpenCode has no
+equivalent hook wiring in the gloria plugin yet; until it does, an OpenCode-only
+machine can run the same `hook-session-start` command periodically (e.g. from a
+shell profile or scheduler). Be honest about this status — do not claim
+automatic Codex/OpenCode hook wiring.
+
+### 7. Report
 
 Summarize what changed (files created/updated, section inserted where,
-registration outcome) and suggest committing the changes, e.g.
+registration outcome, usage tracking configured or declined) and suggest
+committing the changes, e.g.
 `chore: wire gloria agent doc into instruction files`.
 
 ## Idempotency rules
