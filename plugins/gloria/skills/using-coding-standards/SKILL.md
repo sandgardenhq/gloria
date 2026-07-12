@@ -1,9 +1,19 @@
 ---
 name: using-coding-standards
-description: Use while writing code in a project with a registered gloria Coding Standards library — before implementing anything pattern-shaped (a DAO, an API route, a migration, a test harness, a channel adapter), and whenever CLAUDE.md carries a "## Coding Standards" section with a gloria:standards stamp. Drives the write-time discipline: find_snippets before writing, adopt or adapt the canonical exemplar, leave a gloria:snippet provenance marker, contribute reusable shapes back, and justify deliberate divergence.
+description: Use while writing code in a project with a registered gloria Coding Standards library — before implementing anything pattern-shaped (a DAO, an API route, a migration, a test harness, a channel adapter), and whenever CLAUDE.md carries a "## Coding Standards" section with a gloria:standards stamp. Also fires for "follow/use our standards while writing this", "write this the way we do", and "register/contribute this back as a snippet". Drives the write-time discipline: find_snippets before writing, adopt or adapt the canonical exemplar, leave a gloria:snippet provenance marker, contribute reusable shapes back via put_snippet, and justify deliberate divergence.
 ---
 
 # Using Coding Standards While Writing
+
+## "Register" / "contribute a snippet" means call put_snippet
+
+Consulting the library is a gloria MCP call, not memory: **`find_snippets`**
+before writing pattern-shaped code. And when the user says **"register"**,
+**"contribute"**, or **"add" this back as a snippet** — or you produce a reusable
+shape worth sharing — that means **calling the gloria MCP tool `put_snippet`**
+(with the user's approval), not just leaving the code in place. The write-time
+loop is: `find_snippets` → adopt/adapt → leave the `gloria:snippet` marker →
+`put_snippet` for genuinely reusable new shapes.
 
 ## Overview
 

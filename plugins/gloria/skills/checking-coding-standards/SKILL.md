@@ -1,9 +1,19 @@
 ---
 name: checking-coding-standards
-description: Use when asked to check code against a project's registered gloria Coding Standards — "check this PR against our standards", "run a standards check", "audit the repo for drift", "has our code drifted from the rules". Runs diff-scoped checks (the per-PR workhorse), cheap metadata checks (render stamp + rule-evidence staleness), or a full audit (snippet staleness included), and reports findings to the gloria drift ledger via report_check_run. Read-only: findings, never edits.
+description: Use to check code against a project's registered gloria Coding Standards. Fires for plain requests to compare code with the rules — "check this against our standards", "does this drift from our rules/conventions", "are we following our own standards", "review this for standards compliance", "check this PR against our standards", "run a standards check", "audit the repo for drift", "has our code drifted from the rules" — including before or after implementing a change in a project that has registered standards. Runs diff-scoped checks (the per-PR workhorse), cheap metadata checks (render stamp + rule-evidence staleness), or a full audit (snippet staleness included), and reports findings to the gloria drift ledger via report_check_run. Read-only: findings, never edits.
 ---
 
 # Checking Code Against Standards
+
+## "Check against our standards" is a gloria action; reporting means calling report_check_run
+
+When the user asks to **check, audit, or compare** code **against the project's
+standards / rules / conventions** — or asks whether code **drifts** from them —
+that is this skill, driven by gloria's registered library (`get_standards`), not
+an ad-hoc code review from memory. **Reporting** the findings — the sync half —
+means **calling the gloria MCP tool `report_check_run`**, which records them to
+gloria's drift ledger; it is not just printing a summary in chat. Load the
+standards, evaluate, then `report_check_run` (even when findings are empty).
 
 ## Overview
 

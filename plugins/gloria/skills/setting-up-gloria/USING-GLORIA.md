@@ -16,6 +16,18 @@ Gloria is available two ways, and both apply to you:
 - **Agent skills** installed with the Gloria plugin (invoke them by name; do
   not improvise their workflows by hand).
 
+**Vocabulary — "register" and "sync" mean call a Gloria tool.** When the user
+says **"register"** or **"sync"** a resource **with Gloria** — a dependency, a
+project, a coding standard, a rule, a snippet, a document — they mean: call the
+matching Gloria MCP tool (`put_dependency`, `register_project`,
+`register_standard`, `put_rule`, `put_snippet`, `put_document`), **not** perform
+the underlying action informally or just edit a file. "Register this dependency"
+→ `put_dependency`; "sync my project with Gloria" → `register_project` (via the
+`documenting-service-dependencies` skill); "register our standards" → the
+`extracting-coding-standards` skill's `register_standard` / `put_rule` /
+`put_snippet` flow. If a request names one of these resources with "register" or
+"sync", route it to the corresponding tool or skill below.
+
 ## Keeping this file current
 
 This file is written by the `setting-up-gloria` skill and stamped with the

@@ -1,9 +1,25 @@
 ---
 name: documenting-service-dependencies
-description: Use when you need to map and document a codebase's service dependencies — produces four Markdown docs (external SaaS inventory + health checks, internal systems inventory + health checks) each with a summary table, Mermaid diagrams, per-service detail, and copy-paste health-check commands. Triggers include "document our integrations/dependencies", "what external services does this connect to", "make a health-check doc".
+description: Use to map, document, and register a codebase's service dependencies with gloria.dev so they are monitored. Fires for plain requests to sync a dependency or project with gloria — "register this dependency", "register this project", "register/sync our services with gloria", "start monitoring this service", "add this integration to gloria", "sync my project with gloria" — and to inventory them — "document our integrations/dependencies", "what external services does this connect to", "make a health-check doc". Also fires whenever you add, remove, or swap an external service, SaaS API, SDK, API client, database, queue, or internal endpoint. Produces four Markdown docs (external SaaS inventory + health checks, internal systems inventory + health checks) and pushes the structured inventory to gloria.dev via its MCP tools (register_project, put_dependency).
 ---
 
 # Documenting Service Dependencies
+
+## "Register" / "sync" means call the gloria MCP tools
+
+When the user says **"register"**, **"registering"**, or **"sync"** a dependency,
+service, integration, or project **with gloria** (e.g. "register this
+dependency", "register this project", "sync my services with gloria", "start
+monitoring this API"), that means **calling the gloria MCP tools** —
+`register_project` for the project and `put_dependency` for each dependency —
+**not** just writing a Markdown note or editing config. Syncing the inventory to
+gloria.dev is what makes monitoring actually start; it is the point of this skill.
+
+For a **single, obvious dependency** the user points you at ("register the Stripe
+API we just added"), you don't have to regenerate all four Markdown docs first —
+resolve the project (`register_project` if needed), then `put_dependency` for that
+one service. The full four-doc inventory below is for a first-time or whole-repo
+pass. Either way, the gloria MCP call is the deliverable, not optional.
 
 ## Overview
 

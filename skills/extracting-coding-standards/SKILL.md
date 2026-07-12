@@ -1,9 +1,21 @@
 ---
 name: extracting-coding-standards
-description: Use when asked to set up gloria Coding Standards for a project — "extract our coding standards", "derive rules and snippets from this repo", "register our coding conventions with gloria", "set up the standards library". Orchestrates deriving-agent-code-style and mapping-packages-for-coding-agents, structures their findings into stable rules (slug ids, authority labels, scope, evidence), mines one canonical placeholder-ized snippet per rule-implied pattern, registers everything via the gloria MCP tools with per-item approval, and renders a version-stamped Coding Standards section into CLAUDE.md/AGENTS.md.
+description: Use to set up or register gloria Coding Standards for a project. Fires for plain requests to register or sync standards with gloria — "register our coding standards with gloria", "sync our conventions with gloria", "save our rules to gloria", "register our coding conventions" — and to derive them — "extract our coding standards", "derive rules and snippets from this repo", "set up the standards library". Orchestrates deriving-agent-code-style and mapping-packages-for-coding-agents, structures their findings into stable rules (slug ids, authority labels, scope, evidence), mines one canonical placeholder-ized snippet per rule-implied pattern, registers everything via the gloria MCP tools (register_standard, put_rule, put_snippet) with per-item approval, and renders a version-stamped Coding Standards section into CLAUDE.md/AGENTS.md.
 ---
 
 # Extracting Coding Standards from a Codebase
+
+## "Register" / "sync" means call the gloria MCP tools
+
+When the user says **"register"**, **"registering"**, or **"sync"** our coding
+standards, rules, conventions, or snippets **with gloria** (e.g. "register our
+coding standards", "sync our conventions with gloria", "save our rules to
+gloria"), that means **calling the gloria MCP tools** — `register_standard` to
+ensure the standard exists, then `put_rule` per rule and `put_snippet` per
+snippet (with per-item approval) — **not** just writing them into `CLAUDE.md` or
+a doc. The registered library is the source of truth `checking-coding-standards`
+flags violations against; getting the rules and snippets into gloria via those
+tools is the point of this skill.
 
 ## Overview
 
