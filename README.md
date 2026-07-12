@@ -18,7 +18,7 @@ Its first shipping tool is **Canary** — dependency monitoring. Canary discover
 
 ## What's in the `gloria` plugin
 
-Installing the plugin gives your agent ten skills and wires up the hosted MCP server. (Cursor's marketplace has no individual-user self-service install command yet — see its section below for the working-today local-plugin install.)
+Installing the plugin gives your agent nine skills and wires up the hosted MCP server. (Cursor's marketplace has no individual-user self-service install command yet — see its section below for the working-today local-plugin install.)
 
 | Skill                                     | What it does                                                                                                                                                                                                      |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -27,13 +27,14 @@ Installing the plugin gives your agent ten skills and wires up the hosted MCP se
 | **`identifying-skills-for-a-project`**    | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                                                                                                        |
 | **`using-the-skills-library`**            | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.                                                                                      |
 | **`defining-the-documentation-site-map`** | Scans the source and emits a Diátaxis-organized documentation site map plus a per-page content plan and a Mermaid hierarchy.                                                                                      |
-| **`writing-doc-holiday-prompts`**         | Turns that site map into ready-to-run `@doc.holiday` create/update prompts, plus reusable Instruction Library entries.                                                                                            |
 | **`capturing-documentation-screenshots`** | Drives a browser to capture real product-UI screenshots for docs pages, crops out chrome/PII, and wires them in — plus exact capture instructions for shots (terminal, IDE, native dialogs) it can't take itself. |
 | **`extracting-coding-standards`**         | Derives rules and canonical snippets from a codebase's conventions and registers them with gloria's Coding Standards library.                                                                                     |
 | **`using-coding-standards`**              | Write-time discipline: finds the canonical snippet for what you're about to write, adopts or adapts it, and leaves provenance.                                                                                    |
 | **`checking-coding-standards`**           | Checks code against a project's registered Coding Standards — diff-scoped, metadata, or full-audit — and reports drift findings.                                                                                  |
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
+
+> **Looking for Doc Holiday?** The `writing-doc-holiday-prompts` skill moved to its own marketplace, [`sandgardenhq/doc-holiday`](https://github.com/sandgardenhq/doc-holiday). Install it with `/plugin marketplace add sandgardenhq/doc-holiday` (Claude Code) — see that repo's README for every agent.
 
 ## Install
 
