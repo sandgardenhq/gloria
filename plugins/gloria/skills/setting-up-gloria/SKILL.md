@@ -104,10 +104,11 @@ If neither file exists, create `AGENTS.md` containing only the section
 
 ### 6. Offer token-usage tracking setup (optional)
 
-The gloria plugin ships Claude Code hooks that transmit **token usage only**
-(model names, token counts, timestamps, session ids, and a locally-minted
-random machine UUID — never message content, prompts, or code) to gloria.dev's
-cost tracking. They are inert until
+The gloria plugin ships hooks (Claude Code, Codex, OpenCode) that transmit
+**token usage only** (model names, token counts, timestamps, session ids, and
+a locally-minted random machine UUID — never message content, prompts, or
+code) to gloria.dev's cost tracking. Cursor's hooks are wired too but are
+currently a no-op — see the Cursor note below. They are inert until
 `~/.gloria/config.json` exists, so offer to set it up — a "no" still completes
 setup.
 
@@ -150,22 +151,33 @@ automatically — and the session-start sweep also collects **Codex and
 OpenCode** usage from this machine's local session stores, so no further
 wiring is needed when Claude Code runs here regularly.
 
-**Codex / OpenCode without Claude Code (manual, for now):** the collector
-supports both, but only Claude Code auto-wires hooks through the plugin today.
-To trigger sweeps from Codex directly, point `notify` in `~/.codex/config.toml`
-at the collector download stub from the installed plugin (or a clone of the
-published repo, `plugins/gloria/collector/stub.mjs`) — the stub downloads and
-caches the compiled collector binary for Codex-only machines too:
+**Codex:** the Codex plugin manifest (`.codex-plugin/plugin.json`) declares
+the same `Stop`/`SessionStart` hooks Claude Code uses, pointing at the same
+collector. This should auto-wire usage collection the moment the gloria
+plugin is installed through Codex's plugin marketplace — but it has not been
+empirically confirmed against a live Codex install, so treat it as
+expected-but-unverified rather than a guarantee. As a manual fallback (or on
+a Codex-only machine that hasn't installed the plugin), point `notify` in
+`~/.codex/config.toml` at the collector download stub directly:
 
 ```toml
 notify = ["node", "/path/to/plugins/gloria/collector/stub.mjs", "hook-session-start"]
 ```
 
-(The collector accepts and ignores Codex's JSON argv payload.) OpenCode has no
-equivalent hook wiring in the gloria plugin yet; until it does, an OpenCode-only
-machine can run the same `hook-session-start` command periodically (e.g. from a
-shell profile or scheduler). Be honest about this status — do not claim
-automatic Codex/OpenCode hook wiring.
+(The collector accepts and ignores Codex's JSON argv payload.)
+
+**OpenCode:** the gloria OpenCode plugin (`.opencode/plugins/gloria.js`) wires
+`session.created` and `session.idle` to trigger the same collector sweep —
+this ships automatically with the plugin, no manual step needed.
+
+**Cursor:** the Cursor plugin wires `stop`/`sessionStart`/`sessionEnd` hooks
+too, but they call the collector's `hook-cursor` entrypoint, which is a
+**deliberate no-op**. Cursor hook payloads carry no token usage or cost data,
+and Cursor's own local session storage is unreliable for it (missing cache
+tokens, mostly-zeroed counts on current versions) — the accurate source is
+the Team/Enterprise Admin API, which has no collector adapter yet. Be honest
+about this status: Cursor sessions do not contribute usage data today, even
+though the hooks are wired.
 
 ### 7. Report
 
