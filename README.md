@@ -10,6 +10,8 @@
 
 This is the plugin marketplace for **[gloria.dev](https://gloria.dev)**. One repo serves multiple coding agents — [Claude Code](https://docs.claude.com/en/docs/claude-code/plugins), [OpenAI Codex](https://developers.openai.com/codex/plugins), [OpenCode](https://opencode.ai), and [Cursor](https://cursor.com) — from a single published source. Install the `gloria` plugin and your agent gets gloria.dev's skills plus the hosted gloria.dev MCP server.
 
+**[Get started using Gloria →](#install)**
+
 ## What is gloria.dev?
 
 gloria.dev keeps an agent-written codebase aligned with intent. Agents write the code; gloria.dev makes sure it's the code you want. Each tool is driven by a project's own source code — continuously comparing what was actually built against what you intended, and surfacing where the two have drifted apart — so the picture stays current as the code changes.
