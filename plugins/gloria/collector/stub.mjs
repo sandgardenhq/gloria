@@ -30,14 +30,14 @@ import { pathToFileURL } from "node:url"
 // source tree always carries the __PLACEHOLDER__ values (same mechanism as
 // check-version.mjs's INSTALLED_VERSION). Each placeholder appears exactly
 // once so the workflow's sed + grep verification can't miss.
-export const BUILD_VERSION = "7345aeabb572"
-export const RELEASE_TAG = "collector-7345aeabb572"
+export const BUILD_VERSION = "c6b5f4d7d9cf"
+export const RELEASE_TAG = "collector-c6b5f4d7d9cf"
 export const CHECKSUMS = {
-  "darwin-arm64": "3fc4b5e48246c5549c54fb8abcc66b2501bded4773e99d758a6391849736a2a0",
-  "darwin-x64": "9323362701e80fd24579cac28c0a201dafbdb6df5592516f4dcc792e4a09adf6",
-  "linux-x64": "67c5dbeda065fdfc1e93b7daacf385dbbc5609ba89709ae6c98975b49e12e64c",
-  "linux-arm64": "cedfb782e43f52448c8acb4f3cc110441232cae484071eaa0744cf5d21193b9c",
-  "windows-x64": "aed90c584063ea6a6b83990ba9d19f861b54a69038bb638702d14bfee936a78f",
+  "darwin-arm64": "8090ed2ce7d8a2d52b84ac41e5b67c7a3973ea52fd530cdce7b354132467c554",
+  "darwin-x64": "22b7b8ba554bf90c4e14dd472d1102dadd7958380da07c09eb80f1f0bfb8f19b",
+  "linux-x64": "7be7094d43f6f32ec866508b4ddfc457cb748404edc1d8048b16b912eccf5226",
+  "linux-arm64": "8d5a09973fbcf32173018f495f6aca046777bce4d107616aaa7e3c062a44c6f0",
+  "windows-x64": "89ddb4999087a3f2777132cbb8c521dea617135b7ae755f91ca5e82be01a1b98",
 }
 
 const RELEASE_BASE_URL = "https://github.com/sandgardenhq/gloria/releases/download"
