@@ -31,6 +31,7 @@ Installing the plugin gives your agent seven skills and wires up the hosted MCP 
 | **`extracting-coding-standards`**      | Derives rules and canonical snippets from a codebase's conventions and registers them with gloria's Coding Standards library.                                     |
 | **`using-coding-standards`**           | Write-time discipline: finds the canonical snippet for what you're about to write, adopts or adapts it, and leaves provenance.                                    |
 | **`checking-coding-standards`**        | Checks code against a project's registered Coding Standards — diff-scoped, metadata, or full-audit — and reports drift findings.                                  |
+| **`debugging-production-errors`**      | Investigates production errors through gloria's log tools: find the spike, group the errors, correlate with the deploy, map the stack trace to source.            |
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
 
