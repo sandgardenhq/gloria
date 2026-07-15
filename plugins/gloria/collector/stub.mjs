@@ -30,8 +30,8 @@ import { pathToFileURL } from "node:url"
 // source tree always carries the __PLACEHOLDER__ values (same mechanism as
 // check-version.mjs's INSTALLED_VERSION). Each placeholder appears exactly
 // once so the workflow's sed + grep verification can't miss.
-export const BUILD_VERSION = "6ea75397bbc8"
-export const RELEASE_TAG = "collector-6ea75397bbc8"
+export const BUILD_VERSION = "793d96c4b003"
+export const RELEASE_TAG = "collector-793d96c4b003"
 export const CHECKSUMS = {
   "darwin-arm64": "37707d6609a6dcf361a7ec4ee1241b1c4baa7d666afea58c4111a26b730ad70f",
   "darwin-x64": "4182b5d3d84021c1bfc1541d58b256e5b720d530fe653d075ac45473181c20f7",

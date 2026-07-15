@@ -76,6 +76,14 @@ grouping under-reports — say so, and fall back to `query_logs` with `contains`
 Get a full record with `exceptionStacktrace`; when records carry a `traceId`,
 query again with it to see the whole request's lines in order.
 
+To pull one request's or workflow's **full trail**, read the correlation key
+off any record's `attributes` (e.g. `conversation_id`, `request_id`, `job_id`),
+then re-query with `attribute:{key,value}`. This pushes the match down to the
+provider, so it returns the whole set fast — prefer it over a `contains`
+substring scan, which only matches the raw line, can miss values that live in
+structured fields, and hits `truncated` on wide windows. `get_log_provider_status`
+reports each connection's `attributeFilter` capability.
+
 ### Step 4 — Map to source and answer
 
 Hand the stack trace to the codebase (and the project's Feature Map, when
@@ -102,10 +110,11 @@ the finding needs.
 
 ## Common Mistakes
 
-| Mistake                                | Correction                                                      |
-| -------------------------------------- | --------------------------------------------------------------- |
-| Guessing at runtime behavior from code | Query the logs — that's what the connection is for              |
-| Asking the user to paste an AWS key    | Credentials are dashboard-only; route to the Logs settings page |
-| Paging through truncated results       | Narrow the window instead                                       |
-| "No errors" on a plain-text log group  | Check `unstructuredLines` first; fall back to `contains` search |
-| Ignoring `connectionErrors`            | Name the broken connection so someone fixes it                  |
+| Mistake                                  | Correction                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| Guessing at runtime behavior from code   | Query the logs — that's what the connection is for                             |
+| Asking the user to paste an AWS key      | Credentials are dashboard-only; route to the Logs settings page                |
+| Paging through truncated results         | Narrow the window instead                                                      |
+| "No errors" on a plain-text log group    | Check `unstructuredLines` first; fall back to `contains` search                |
+| Ignoring `connectionErrors`              | Name the broken connection so someone fixes it                                 |
+| Substring-searching for an id in a field | Use `attribute:{key,value}` (pushed down); `contains` misses structured fields |
