@@ -20,18 +20,19 @@ Its first shipping tool is **Canary** — dependency monitoring. Canary discover
 
 ## What's in the `gloria` plugin
 
-Installing the plugin gives your agent seven skills and wires up the hosted MCP server. (Cursor's marketplace has no individual-user self-service install command yet — see its section below for the working-today local-plugin install.)
+Installing the plugin gives your agent nine skills and wires up the hosted MCP server. (Cursor's marketplace has no individual-user self-service install command yet — see its section below for the working-today local-plugin install.)
 
-| Skill                                  | What it does                                                                                                                                                      |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`setting-up-gloria`**                | Wires Gloria into a repo: writes the `.gloria/USING-GLORIA.md` agent playbook, adds a Gloria section to `CLAUDE.md`/`AGENTS.md`, and offers project registration. |
-| **`documenting-service-dependencies`** | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary.                                 |
-| **`identifying-skills-for-a-project`** | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                                                        |
-| **`using-the-skills-library`**         | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.                                      |
-| **`extracting-coding-standards`**      | Derives rules and canonical snippets from a codebase's conventions and registers them with gloria's Coding Standards library.                                     |
-| **`using-coding-standards`**           | Write-time discipline: finds the canonical snippet for what you're about to write, adopts or adapts it, and leaves provenance.                                    |
-| **`checking-coding-standards`**        | Checks code against a project's registered Coding Standards — diff-scoped, metadata, or full-audit — and reports drift findings.                                  |
-| **`debugging-production-errors`**      | Investigates production errors through gloria's log tools: find the spike, group the errors, correlate with the deploy, map the stack trace to source.            |
+| Skill                                    | What it does                                                                                                                                                      |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`setting-up-gloria`**                  | Wires Gloria into a repo: writes the `.gloria/USING-GLORIA.md` agent playbook, adds a Gloria section to `CLAUDE.md`/`AGENTS.md`, and offers project registration. |
+| **`documenting-service-dependencies`**   | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary.                                 |
+| **`identifying-skills-for-a-project`**   | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                                                        |
+| **`using-the-skills-library`**           | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.                                      |
+| **`extracting-coding-standards`**        | Derives rules and canonical snippets from a codebase's conventions and registers them with gloria's Coding Standards library.                                     |
+| **`using-coding-standards`**             | Write-time discipline: finds the canonical snippet for what you're about to write, adopts or adapts it, and leaves provenance.                                    |
+| **`checking-coding-standards`**          | Checks code against a project's registered Coding Standards — diff-scoped, metadata, or full-audit — and reports drift findings.                                  |
+| **`debugging-production-errors`**        | Investigates production errors through gloria's log tools: find the spike, group the errors, correlate with the deploy, map the stack trace to source.            |
+| **`investigating-production-incidents`** | Wraps `debugging-production-errors` with a durable investigation folder — evidence saved to `evidence/`, findings written to `INVESTIGATION.md`.                  |
 
 The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
 
