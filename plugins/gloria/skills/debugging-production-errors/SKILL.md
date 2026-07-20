@@ -10,9 +10,9 @@ description: Use to investigate production problems through gloria's log debuggi
 When the user asks **why something is failing in production**, **what happened at
 a given time**, or to **check/debug the logs**, that is this skill, driven by the
 gloria MCP log tools — not guesswork from the code alone. The tools query the
-org's own log provider (e.g. AWS CloudWatch) live with a stored read-only
-credential; gloria stores no log data, and neither should you assume any history
-beyond what a query returns.
+org's own log provider (e.g. AWS CloudWatch or Cloudflare Workers) live with a
+stored read-only credential; gloria stores no log data, and neither should you
+assume any history beyond what a query returns.
 
 ## Overview
 
@@ -43,9 +43,11 @@ and point the user at the project's **Logs settings page** on gloria.dev — an
 org admin connects a provider there. **Never ask for a credential in the
 conversation**; credentials are dashboard-only by design.
 
-When configured, note the connections (name, region, services, lastVerifiedAt):
-a project may aggregate several accounts/regions, and the query tools already
-fan out across all of them — you never pick a connection.
+When configured, note the connections (name, location, services, lastVerifiedAt) —
+`location` is the AWS region for a CloudWatch connection, or the account id for
+a Cloudflare Workers connection. A project may aggregate several accounts, and
+the query tools already fan out across all of them — you never pick a
+connection.
 
 ### Step 1 — Scope the incident
 
@@ -113,7 +115,7 @@ the finding needs.
 | Mistake                                  | Correction                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------ |
 | Guessing at runtime behavior from code   | Query the logs — that's what the connection is for                             |
-| Asking the user to paste an AWS key      | Credentials are dashboard-only; route to the Logs settings page                |
+| Asking the user to paste a credential    | Credentials are dashboard-only; route to the Logs settings page                |
 | Paging through truncated results         | Narrow the window instead                                                      |
 | "No errors" on a plain-text log group    | Check `unstructuredLines` first; fall back to `contains` search                |
 | Ignoring `connectionErrors`              | Name the broken connection so someone fixes it                                 |
