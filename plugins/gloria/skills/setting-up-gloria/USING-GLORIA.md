@@ -1,4 +1,4 @@
-<!-- gloria-doc-version: 0.3.1 -->
+<!-- gloria-doc-version: 0.3.2 -->
 
 # Using Gloria
 
@@ -12,7 +12,7 @@ trigger matches the task you are doing, take the corresponding action.
 Gloria is available two ways, and both apply to you:
 
 - **MCP tools** on the `gloria` server (dependencies, skills library,
-  documents, Doc Holiday).
+  documents, cost tracking, Doc Holiday).
 - **Agent skills** installed with the Gloria plugin (invoke them by name; do
   not improvise their workflows by hand).
 
@@ -28,19 +28,37 @@ the underlying action informally or just edit a file. "Register this dependency"
 `put_snippet` flow. If a request names one of these resources with "register" or
 "sync", route it to the corresponding tool or skill below.
 
+## Start of every session
+
+Two cheap checks, done as early as possible — before other Gloria work, and
+regardless of what the task turns out to be:
+
+1. **Tag the session to its work item, if you can.** Identify the GitHub
+   issue this session is working on — from the user's request, the current
+   branch name, or an open PR — and call `tag_session_work_item` with it
+   right away. It only writes to this session's own transcript (no database
+   call), so there is no cost to calling it early, and no harm in calling it
+   again later if the work item becomes clear or changes mid-session. Skip it
+   only when no issue genuinely applies (pure exploration, chores with no
+   tracked issue).
+2. **Check this file isn't stale.** Call `get_info` (cheap) and compare its
+   `latestAgentDocVersion` field to the `gloria-doc-version` stamped at the
+   top of this file. If newer, tell the user and offer to re-run
+   `setting-up-gloria` — see "Keeping this file current" below.
+
 ## Keeping this file current
 
 This file is written by the `setting-up-gloria` skill and stamped with the
-plugin version that shipped it (see the first line). The first time you call
-a Gloria MCP tool in a session, check the `latestAgentDocVersion` field that
-`get_info` returns. If it is newer than this file's stamp, tell the user and
-offer to re-run `setting-up-gloria` to refresh this file. Never edit this
-file by hand — it is replaced verbatim on refresh.
+plugin version that shipped it (see the first line). Check it for staleness
+at the start of every session (see above), not just the first time some
+other task happens to call a Gloria tool. Never edit this file by hand — it
+is replaced verbatim on refresh.
 
 ## When to use Gloria
 
 | The moment in your work                                                                                       | Required action                                                                                                                                                             |
 | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| You are starting a session and can identify the GitHub issue/work item involved                               | Tag it immediately: `tag_session_work_item` — attributes this session's token cost to that issue. See "Start of every session"                                              |
 | You added, removed, or swapped an external service, SaaS API, SDK, or API client                              | Update the dependency inventory: run the `documenting-service-dependencies` skill, or for a single obvious change sync directly with `put_dependency` / `delete_dependency` |
 | You changed how an internal system is reached (new database, queue, internal API, or a changed endpoint/auth) | Same as above — internal dependencies are monitored too                                                                                                                     |
 | The user asks what this project depends on, or whether a vendor/service is healthy                            | `list_dependencies` / `get_dependency` — answer from Gloria's inventory, not just from reading code                                                                         |
@@ -64,6 +82,15 @@ Reads need `inventory:read` (any member); writes need `inventory:write`;
   first when you need org context or a staleness check.
 - `register_project` — register this repo as a gloria.dev project.
 - `list_projects` — the org's registered projects.
+
+**Cost tracking**
+
+- `tag_session_work_item` — declare the GitHub issue this session is working
+  on (bare issue number, `gh:482`, or a full issue URL). Session-local — it
+  writes only to this session's own transcript, never the database — the
+  local usage collector reads it back out and reports it for per-issue token
+  cost attribution. Call it once the issue is known; see "Start of every
+  session".
 
 **Dependencies (Canary)**
 
@@ -120,6 +147,9 @@ full workflow.
 
 ## First-time and recovery
 
+- **No work item applies to this session** — skip `tag_session_work_item`;
+  its cost simply won't attribute to an issue. Don't guess a ref just to have
+  one.
 - **Project not registered** — `register_project` needs `inventory:write`.
   Offer it once; if the user declines, continue without syncing.
 - **MCP auth fails** — the user must log in to the `gloria` server: Claude
