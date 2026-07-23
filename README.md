@@ -45,7 +45,7 @@ The plugin ships Claude Code hooks that feed gloria.dev's token cost tracking. O
 
 There is nothing to install: the first hook fire downloads a compiled collector binary for your platform (~50 MB, once per collector release) from this repo's GitHub Releases, verifies it against SHA-256 checksums pinned into the plugin at publish time, and caches it under `~/.gloria/bin/`. If the download can't complete (offline, unsupported platform), the hook exits silently and retries on a later session.
 
-**Privacy:** the collector transmits **token usage only** — model names, token counts, timestamps, session/request identifiers, a random per-machine identifier (a UUID minted locally, not your hostname), and the optional project id from your config. To extract those numbers it reads your local session files (which contain conversation content), but it never transmits message content, prompts, code, or file paths.
+**Privacy:** the collector transmits **token usage only** — model names, token counts, timestamps, session/request identifiers, and a random per-machine identifier (a UUID minted locally, not your hostname). Work-item cost attribution additionally reads your session's own `git remote` to resolve which gloria project it belongs to — never a value from your config. To extract those numbers it reads your local session files (which contain conversation content), but it never transmits message content, prompts, code, or file paths.
 
 **The hooks are inert until you configure them.** With no config present they exit 0 immediately (never interrupting your session) and log a one-line setup hint to `~/.gloria/collector.log`. Nothing is collected or sent.
 
@@ -61,7 +61,10 @@ One-time setup:
    }
    ```
 
-   An optional `"projectId"` attributes this machine's usage to one gloria project.
+   Work-item cost attribution needs nothing further: the collector resolves
+   which gloria project a session belongs to itself, per session, from that
+   session's own `git remote` — so one machine attributes correctly across
+   every gloria-registered repo you work in.
 
 From the next session on, the hooks report usage automatically. If the machine is offline, batches queue under `~/.gloria/` and drain on a later hook run.
 

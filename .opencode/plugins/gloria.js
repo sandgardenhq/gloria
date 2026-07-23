@@ -18,7 +18,7 @@ const collectorStubPath = path.resolve(__dirname, "../../plugins/gloria/collecto
 
 // Stamped at publish time by .github/workflows/publish-marketplace.yml — the
 // source tree always reads "DEV", exactly like check-plugin-version's hook.
-const INSTALLED_VERSION = "0.3.2"
+const INSTALLED_VERSION = "0.3.3"
 const LATEST_VERSION_URL = "https://gloria.dev/api/plugin-version"
 
 // Local, dependency-free comparison for this repo's simple `x.y.z` versions

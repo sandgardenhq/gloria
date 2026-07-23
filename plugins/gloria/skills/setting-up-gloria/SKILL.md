@@ -141,11 +141,14 @@ If the user says yes:
    once; a compromised or lost key is revoked from the Clerk organization
    settings, and re-running the tool mints a fresh one.
 
-   An optional `"projectId"` attributes the machine's usage to one gloria
-   project. The collector needs no runtime install: the plugin's first hook
-   fire downloads a compiled, checksum-verified collector binary for this
-   platform (~50 MB, once per collector release) and caches it under
-   `~/.gloria/bin/`.
+   Work-item cost attribution needs no config beyond this: the collector
+   resolves which gloria project a session belongs to itself, per session,
+   from that session's own `git remote` — never from a value in this file, so
+   one machine works correctly across as many gloria-registered repos as the
+   developer has checked out. The collector needs no runtime install: the
+   plugin's first hook fire downloads a compiled, checksum-verified collector
+   binary for this platform (~50 MB, once per collector release) and caches it
+   under `~/.gloria/bin/`.
 
    **Manual fallback (MCP not connected on this machine):** any org member
    can mint the key from a machine that _does_ have the gloria MCP server
