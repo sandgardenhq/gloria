@@ -298,22 +298,25 @@ this project and how is it built," for someone who has never seen the repo:
    list, the actual problem it solves and how, written for a reader with no
    context. Draw this from the README, the code you've already read while
    classifying dependencies, and the description you just backfilled.
-2. **Tech stack.** The languages, frameworks, datastores, and hosting platform
-   actually in use — derived from manifests (`package.json`, `go.mod`,
-   `requirements.txt`, …) and config (`wrangler.jsonc`, `Dockerfile`,
-   `docker-compose.yml`), not guessed.
-3. **Architecture diagram.** A Mermaid diagram (`graph TD` or `flowchart`)
+2. **Architecture diagram.** A Mermaid diagram (`graph TD` or `flowchart`)
    showing the major components/services and how they talk to each other —
    reuse the dependency picture you already built for `EXTERNAL_SAAS.md` /
    `INTERNAL_SYSTEMS.md` as your source of truth for the edges, so the diagram
    never contradicts the inventory docs.
+3. **Tech stack.** The languages, frameworks, datastores, and hosting platform
+   actually in use — derived from manifests (`package.json`, `go.mod`,
+   `requirements.txt`, …) and config (`wrangler.jsonc`, `Dockerfile`,
+   `docker-compose.yml`), not guessed.
 
-Push it with `put_document`, name `PROJECT_EXPLAINER`:
+Push it with `put_document`, name `PROJECT_EXPLAINER`. **Start the markdown
+with `# Project Explanation`, not the project name** — the overview page that
+renders this doc already shows the project name, so a leading `# <Project
+Name>` heading would be duplicative:
 
 ````jsonc
 {
   "name": "PROJECT_EXPLAINER",
-  "markdown": "# <Project Name>\n\n## What it does\n…\n\n## Tech stack\n…\n\n## Architecture\n```mermaid\ngraph TD\n  …\n```\n",
+  "markdown": "# Project Explanation\n\n## What it does\n…\n\n## Architecture\n```mermaid\ngraph TD\n  …\n```\n\n## Tech stack\n…\n",
 }
 ````
 
