@@ -1,6 +1,6 @@
 ---
 name: documenting-service-dependencies
-description: Use to map, document, and register a codebase's service dependencies with gloria.dev so they are monitored. Fires for plain requests to sync a dependency or project with gloria — "register this dependency", "register this project", "register/sync our services with gloria", "start monitoring this service", "add this integration to gloria", "sync my project with gloria" — and to inventory them — "document our integrations/dependencies", "what external services does this connect to", "make a health-check doc". Also fires whenever you add, remove, or swap an external service, SaaS API, SDK, API client, database, queue, or internal endpoint. Produces four Markdown docs (external SaaS inventory + health checks, internal systems inventory + health checks) and pushes the structured inventory to gloria.dev via its MCP tools (register_project, put_dependency).
+description: Use to map, document, and register a codebase's service dependencies with gloria.dev so they are monitored. Fires for plain requests to sync a dependency or project with gloria — "register this dependency", "register this project", "register/sync our services with gloria", "start monitoring this service", "add this integration to gloria", "sync my project with gloria" — and to inventory them — "document our integrations/dependencies", "what external services does this connect to", "make a health-check doc". Also fires whenever you add, remove, or swap an external service, SaaS API, SDK, API client, database, queue, or internal endpoint. Produces four dependency Markdown docs (external SaaS inventory + health checks, internal systems inventory + health checks) plus, on a first-time pass, a project explainer and (for monorepos) a package/workspace map, and pushes all of it to gloria.dev via its MCP tools (register_project, put_dependency, put_document).
 ---
 
 # Documenting Service Dependencies
@@ -33,6 +33,8 @@ Scan a codebase for every system it talks to, classify each as **external SaaS**
 | `INTERNAL_SYSTEMS_HEALTHCHECKS.md` | An up/down probe for each system in `INTERNAL_SYSTEMS.md`                                           |
 
 Generate **all four by default**. Cross-link them (each inventory links to its health-check doc and vice versa; the two inventories link to each other).
+
+On a first-time or whole-repo pass, also generate `PROJECT_EXPLAINER` (and, for monorepos, `PACKAGE_MAP` — see below) alongside the four dependency docs. Skip both for a single-dependency touch-up, same carve-out as the four dependency docs above.
 
 **Document only — never execute the health-check commands.** Write them from code evidence (endpoints, auth headers, env vars). Do not run them or require live credentials.
 
@@ -149,10 +151,11 @@ All `slug` fields are **kebab-case** (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
   "name": "Acme API",
   "description": "…",
   "repoUrl": "https://github.com/acme/api",
-} // repoUrl optional
+  "docsUrl": "https://docs.acme.dev",
+} // repoUrl, docsUrl optional
 ```
 
-`slug` and `name` are required; `description` and `repoUrl` are optional. `description` is **backfilled from what you learned while exploring** (a one-or-two-sentence summary of what the project is and does) when the project has none — but an existing non-empty description is **never overwritten without the user's consent**. See [Resolving the project](#resolving-the-project).
+`slug` and `name` are required; `description`, `repoUrl`, and `docsUrl` are optional. `description` is **backfilled from what you learned while exploring** (a one-or-two-sentence summary of what the project is and does) when the project has none — but an existing non-empty `description` is **never overwritten without the user's consent**. `docsUrl` follows the same backfill-only rule — see [Resolving the project](#resolving-the-project).
 
 `dependency` is a discriminated union on `kind`. Shared fields plus a `kind`-specific `details`:
 
@@ -222,14 +225,21 @@ So `"http"` is reserved for a service with **none** of these: no Bearer-token en
 ### Workflow
 
 1. `get_info()` to confirm access and that your session has an active org (cheap sanity check). A no-active-org error here is what you surface to the user.
-2. **Resolve the project** (identify → match → describe) before any `put_dependency` / `put_document`, both of which require the project to exist. See [Resolving the project](#resolving-the-project) below.
-3. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`. Attach a `healthCheck` **authenticated whenever an authenticated check exists** — `http-bearer` (token declared as a secret) whenever the app reaches the service with a Bearer token; **no** `healthCheck` (point the user to a web-UI connector) when an authenticated check exists but the embedded probe can't express it (api-key header, SigV4, SDK) or a dedicated connector exists; and `http` **only** for a service with no authenticated check at all. Never emit an unauthenticated `http` probe for a service that has any authenticated check (see [Choosing the embedded health-check probe](#choosing-the-embedded-health-check-probe)). The gloria.dev web service runs the check on a schedule. Don't disable a check — disabling is a user action in the web UI.
-4. `put_document` once per Markdown doc (`EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
-5. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
+2. **Resolve the project** (identify → match → describe → docs URL) before any `put_dependency` / `put_document`, both of which require the project to exist. See [Resolving the project](#resolving-the-project) below.
+3. On a first-time/whole-repo pass, generate and push the project explainer —
+   see [Generating the project explainer](#generating-the-project-explainer).
+   By this point in the flow you've already drafted the four dependency docs
+   per [Process](#process) above, so its architecture diagram can reuse them.
+4. For a monorepo, on that same first-time/whole-repo pass, generate and push
+   the package/workspace map — see [Generating the package/workspace
+   map](#generating-the-packageworkspace-map).
+5. `put_dependency` once per dependency from both inventory docs — map external SaaS → `external_saas`, internal systems → `internal_system`. Reusing the doc's section/category for `category`, the captured URLs for `endpoints`, and the classification's reachability for internal `details`. Attach a `healthCheck` **authenticated whenever an authenticated check exists** — `http-bearer` (token declared as a secret) whenever the app reaches the service with a Bearer token; **no** `healthCheck` (point the user to a web-UI connector) when an authenticated check exists but the embedded probe can't express it (api-key header, SigV4, SDK) or a dedicated connector exists; and `http` **only** for a service with no authenticated check at all. Never emit an unauthenticated `http` probe for a service that has any authenticated check (see [Choosing the embedded health-check probe](#choosing-the-embedded-health-check-probe)). The gloria.dev web service runs the check on a schedule. Don't disable a check — disabling is a user action in the web UI.
+6. `put_document` once per Markdown doc (`EXTERNAL_SAAS`, `EXTERNAL_SAAS_HEALTHCHECKS`, `INTERNAL_SYSTEMS`, `INTERNAL_SYSTEMS_HEALTHCHECKS`) so the rendered docs show on the project page alongside the structured inventory.
+7. Use `list_dependencies` / `get_dependency` to verify, `delete_dependency` to prune.
 
 ### Resolving the project
 
-`register_project` is an **upsert keyed by slug**, so it both creates a missing project and updates an existing one. Don't call it blindly — first work out _which_ project this codebase is, and never clobber a description a human may have edited. Three phases:
+`register_project` is an **upsert keyed by slug**, so it both creates a missing project and updates an existing one. Don't call it blindly — first work out _which_ project this codebase is, and never clobber a description a human may have edited. Four phases:
 
 **1. Identify (from the git remote, with fallback).** Read `origin`'s URL.
 
@@ -248,9 +258,105 @@ So `"http"` is reserved for a service with **none** of these: no Bearer-token en
 - **Just created, or existing with an empty/absent description** → write a **one-or-two-sentence** description (what the project _is_ and does, drawn from what you learned while exploring — README, manifests, the dependency picture you just built) and set it. Backfill silently.
 - **Existing with a non-empty description** → **do not overwrite it silently.** Show the user the current description and your freshly-generated one and **ask whether to replace**; update only on consent. If you can't ask (non-interactive run), leave the existing description and note it in your report.
 
-When setting/updating the description on a project that already has a `name` / `repoUrl`, send those alongside `description` in the `register_project` call so the upsert doesn't blank them.
+**4. Docs URL (backfill, or update only with consent).** Look at the resolved project's `docsUrl`:
+
+- **Just created, or existing with an empty/absent `docsUrl`** — look for
+  evidence anywhere in the repo, not just one file: `homepage` in
+  `package.json` (root, then the primary app/web workspace if the root has
+  none); a docs-site link in the README (a "Documentation" section or badge);
+  an `llms.txt` (per [llmstxt.org](https://llmstxt.org)) or `agents.txt`
+  pointing at a docs site; and a hardcoded "Docs" link in the app's own
+  header, footer, or marketing/nav components. `register_project`'s fetched
+  GitHub repo metadata does **not** carry a `homepage` or `description` field
+  today, so it isn't a usable source here — check the repo's **Website**
+  field GitHub's own page surfaces instead (the same concept as
+  `package.json`'s `homepage`), if you're looking there anyway; the repo's
+  text **description** is not a URL and is not evidence for `docsUrl`. **Do
+  not guess** — a URL only counts as evidence if you can point at exactly
+  where you found it; if a genuine search of all of the above turns up
+  nothing, ask the user directly whether the project has a docs site,
+  and skip `docsUrl` entirely if they don't have one or don't answer
+  (non-interactive run).
+- **Existing with a non-empty `docsUrl`** — **do not overwrite it silently.**
+  Same consent rule as `description`: show the user the current value and your
+  candidate and ask before replacing.
+
+When setting/updating `description` and/or `docsUrl` on a project that already
+has a `name` / `repoUrl`, send those alongside the changed field(s) in the
+`register_project` call so the upsert doesn't blank them.
 
 `register_project`, `put_dependency`, and `put_document` are **upserts keyed by slug/name**, so re-running them after the code changes keeps the inventory current — that's the intended way to resync.
+
+### Generating the project explainer
+
+On a first-time or whole-repo registration pass (not a single-dependency
+touch-up), after resolving the project and before syncing dependencies, write
+and push a `PROJECT_EXPLAINER` document — a plain-language answer to "what is
+this project and how is it built," for someone who has never seen the repo:
+
+1. **What it does.** One or two paragraphs in plain language — not a feature
+   list, the actual problem it solves and how, written for a reader with no
+   context. Draw this from the README, the code you've already read while
+   classifying dependencies, and the description you just backfilled.
+2. **Tech stack.** The languages, frameworks, datastores, and hosting platform
+   actually in use — derived from manifests (`package.json`, `go.mod`,
+   `requirements.txt`, …) and config (`wrangler.jsonc`, `Dockerfile`,
+   `docker-compose.yml`), not guessed.
+3. **Architecture diagram.** A Mermaid diagram (`graph TD` or `flowchart`)
+   showing the major components/services and how they talk to each other —
+   reuse the dependency picture you already built for `EXTERNAL_SAAS.md` /
+   `INTERNAL_SYSTEMS.md` as your source of truth for the edges, so the diagram
+   never contradicts the inventory docs.
+
+Push it with `put_document`, name `PROJECT_EXPLAINER`:
+
+````jsonc
+{
+  "name": "PROJECT_EXPLAINER",
+  "markdown": "# <Project Name>\n\n## What it does\n…\n\n## Tech stack\n…\n\n## Architecture\n```mermaid\ngraph TD\n  …\n```\n",
+}
+````
+
+`put_document` is an upsert by name — re-running this after the code changes
+significantly (new service, major refactor) is the intended way to keep it
+current, same as the dependency docs.
+
+### Generating the package/workspace map
+
+**Monorepos only** — skip entirely for a single-package repo (no
+`workspaces` in `package.json`, no `pnpm-workspace.yaml`, no Cargo/Go
+workspace file). On a first-time or whole-repo pass, write and push a
+`PACKAGE_MAP` document listing every package/workspace and its role.
+
+Derive it the same way `mapping-packages-for-coding-agents` derives its
+routing block — the internal dependency graph (who imports whom) and each
+package's real role — but write it as a **descriptive list**, not routing
+triggers: this doc answers "what does each package contain and do," for a
+project-overview page, not "which package does my change belong in." For
+each package: its path, a one-line role, and the dependency direction
+relative to the rest of the workspace. If you (or a teammate) already ran
+`mapping-packages-for-coding-agents` for this repo and have its output handy,
+reuse the derived graph and per-package one-liners directly instead of
+re-deriving them — don't paste its routing-trigger bullets ("Put here when…",
+"Do NOT put here") verbatim, they answer the wrong question for this doc.
+
+List only the repo's real, user-facing packages — not every entry in a
+`workspaces` glob. Small tooling/plugin workspaces that exist to support the
+build (a version-check hook, a publish-guard script, a bundled editor plugin)
+aren't packages someone registering this project needs listed. If the repo's
+own instructions (`CLAUDE.md`/`AGENTS.md`, a monorepo-structure doc) already
+name and describe the official package set, prefer that curated list over the
+raw manifest glob when the two disagree — the manifest may include workspaces
+the maintainers don't consider part of the public structure.
+
+Push it with `put_document`, name `PACKAGE_MAP`:
+
+```jsonc
+{
+  "name": "PACKAGE_MAP",
+  "markdown": "# Package Map\n\n<one-line dependency-direction summary>\n\n## `<package>` (`<path>`)\n\n<one-line role>\n\n… one section per package …\n",
+}
+```
 
 ## Anti-patterns
 
@@ -271,6 +377,20 @@ When setting/updating the description on a project that already has a `name` / `
 - ❌ Creating a duplicate project when one already exists under a different slug but the same `repoUrl` — match on `repoUrl` and reuse the existing project's slug.
 - ❌ Leaving a freshly-created or empty project with no description when your exploration yielded enough to write a one-or-two-sentence summary.
 - ❌ Expecting an MCP tool that _runs_ health checks — the server stores the inventory and the Markdown docs (via `put_document`), but it never executes the curl probes.
+- ❌ Inventing a `docsUrl` — only set it from actual evidence (`package.json`
+  `homepage`, a README docs link, a user's direct confirmation); never guess a
+  plausible-looking URL.
+- ❌ Overwriting an existing non-empty `docsUrl` without asking — same consent
+  rule as `description`.
+- ❌ Generating a `PACKAGE_MAP` for a single-package (non-monorepo) repo — that
+  document is scoped to monorepos only.
+- ❌ Skipping the project explainer or package map on a first-time/whole-repo
+  pass because the dependency sync already succeeded — they're separate
+  required deliverables of the same registration flow, not optional extras.
+- ❌ Pasting `mapping-packages-for-coding-agents`'s routing-trigger bullets
+  ("Put here when…") into `PACKAGE_MAP` verbatim — that doc is agent routing
+  instructions; `PACKAGE_MAP` is a descriptive overview for a human reading the
+  project page. Reuse the derived graph, not the routing prose.
 
 ## Reference Examples
 
