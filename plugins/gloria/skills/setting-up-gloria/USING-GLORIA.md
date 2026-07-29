@@ -1,4 +1,4 @@
-<!-- gloria-doc-version: 0.3.7 -->
+<!-- gloria-doc-version: 0.3.8 -->
 
 # Using Gloria
 
@@ -33,14 +33,36 @@ the underlying action informally or just edit a file. "Register this dependency"
 Two cheap checks, done as early as possible — before other Gloria work, and
 regardless of what the task turns out to be:
 
-1. **Tag the session to its work item, if you can.** Identify the GitHub
-   issue this session is working on — from the user's request, the current
-   branch name, or an open PR — and call `tag_session_work_item` with it
-   right away. It only writes to this session's own transcript (no database
-   call), so there is no cost to calling it early, and no harm in calling it
-   again later if the work item becomes clear or changes mid-session. Skip it
-   only when no issue genuinely applies (pure exploration, chores with no
-   tracked issue).
+1. **Declare the work item, and keep it current.** Identify the GitHub issue
+   this session is working on and call `tag_session_work_item` with it before
+   you start working. Do this silently — do not ask the user to confirm a
+   match you are confident in. Work down this list and stop at the first hit:
+   1. an issue number in the user's request (`#391`, "issue 391", an issue
+      URL);
+   2. an issue named earlier in this conversation as the thing being worked
+      on;
+   3. an issue number in the current branch name (`feature/foo-123`,
+      `123-foo`, `issue-123`) — the usual case in Conductor-style setups,
+      where each workspace and branch is scoped to one issue;
+   4. the issue closed by an open PR for the current branch
+      (`gh pr view --json closingIssuesReferences`) — only worth the
+      round-trip when 1-3 found nothing.
+
+   Skip it only when no issue genuinely applies (pure exploration, chores with
+   no tracked issue). Never invent a ref just to have one.
+
+   **Then declare again whenever the answer could have changed.** This is a
+   standing obligation for the whole session, not a one-time step at the
+   start. Re-call `tag_session_work_item` when the branch is renamed, when the
+   user names a different issue, when a PR is opened against a different
+   issue, or when you discover mid-session that the real work item is another
+   one. Your declaration outranks every signal Gloria collects automatically,
+   so it is the **only** thing that can correct a session already credited to
+   the wrong issue — a stale declaration is not neutral, it silently keeps the
+   session's entire cost on the wrong issue. The call is session-local
+   (transcript only, no database round-trip), so calling it again costs
+   nothing, and the most recent call always wins.
+
 2. **Check this file isn't stale.** Call `get_info` (cheap) and compare its
    `latestAgentDocVersion` field to the `gloria-doc-version` stamped at the
    top of this file. If newer, tell the user and offer to re-run
@@ -58,7 +80,8 @@ is replaced verbatim on refresh.
 
 | The moment in your work                                                                                       | Required action                                                                                                                                                             |
 | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| You are starting a session and can identify the GitHub issue/work item involved                               | Tag it immediately: `tag_session_work_item` — attributes this session's token cost to that issue. See "Start of every session"                                              |
+| You are starting a session and can identify the GitHub issue/work item involved                               | Declare it immediately: `tag_session_work_item` — attributes this session's token cost to that issue. See "Start of every session"                                          |
+| The work item changed mid-session (branch renamed, a different issue named, PR opened against another issue)  | Declare again: `tag_session_work_item`. The latest declaration wins and is the only way to correct an attribution that is already wrong                                     |
 | You added, removed, or swapped an external service, SaaS API, SDK, or API client                              | Update the dependency inventory: run the `documenting-service-dependencies` skill, or for a single obvious change sync directly with `put_dependency` / `delete_dependency` |
 | You changed how an internal system is reached (new database, queue, internal API, or a changed endpoint/auth) | Same as above — internal dependencies are monitored too                                                                                                                     |
 | The user asks what this project depends on, or whether a vendor/service is healthy                            | `list_dependencies` / `get_dependency` — answer from Gloria's inventory, not just from reading code                                                                         |
@@ -89,8 +112,9 @@ Reads need `inventory:read` (any member); writes need `inventory:write`;
   on (bare issue number, `gh:482`, or a full issue URL). Session-local — it
   writes only to this session's own transcript, never the database — the
   local usage collector reads it back out and reports it for per-issue token
-  cost attribution. Call it once the issue is known; see "Start of every
-  session".
+  cost attribution. Call it as soon as the issue is known, and **again** every
+  time the work item changes; the most recent declaration wins and outranks
+  every automatically-collected signal. See "Start of every session".
 
 **Dependencies (Canary)**
 
@@ -147,9 +171,15 @@ full workflow.
 
 ## First-time and recovery
 
-- **No work item applies to this session** — skip `tag_session_work_item`;
-  its cost simply won't attribute to an issue. Don't guess a ref just to have
-  one.
+- **No work item applies to this session** — skip `tag_session_work_item`; its
+  cost simply won't attribute to an issue. Don't guess a ref just to have one.
+  If one becomes clear later, declare it then — a late declaration still
+  attributes the session's whole cost, including what was already spent.
+- **You declared the wrong issue** — call `tag_session_work_item` again with
+  the right one. The later declaration supersedes the earlier one and moves
+  the already-credited cost with it. There is no way to clear a declaration
+  other than replacing it, and no lower-ranked signal (a branch rename, a PR's
+  `Closes #N`) can override one — so correcting it is on you.
 - **Project not registered** — `register_project` needs `inventory:write`.
   Offer it once; if the user declines, continue without syncing.
 - **MCP auth fails** — the user must log in to the `gloria` server: Claude
