@@ -26,21 +26,33 @@ import os from "node:os"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-// Stamped by .github/workflows/publish-marketplace.yml at publish time — the
-// source tree always carries the __PLACEHOLDER__ values (same mechanism as
+// Stamped by .github/workflows/publish-marketplace.yml (or, for another
+// marketplace's own copy of this shared source, its own publish workflow —
+// e.g. publish-miranda-marketplace.yml) at publish time — the source tree
+// always carries the __PLACEHOLDER__ values (same mechanism as
 // check-version.mjs's INSTALLED_VERSION). Each placeholder appears exactly
 // once so the workflow's sed + grep verification can't miss.
-export const BUILD_VERSION = "598f157a48dc"
-export const RELEASE_TAG = "collector-598f157a48dc"
+//
+// RELEASE_REPO and ASSET_PREFIX exist because this ONE stub.mjs source ships
+// into multiple marketplaces' plugins (gloria, miranda, …), each releasing
+// its own compiled collector binaries on its OWN repo's GitHub Releases —
+// GitHub Releases are per-repo, so nothing is shared across them. Every
+// marketplace's workflow stamps its own repo ("sandgardenhq/gloria" /
+// "sandgardenhq/miranda") and asset-name prefix ("gloria-collector" /
+// "miranda-collector") into its copy, so two plugins installed on the same
+// machine cache and download distinctly-named binaries under the same
+// shared ~/.gloria/bin/ directory without colliding.
+export const BUILD_VERSION = "5255f34b6f8f"
+export const RELEASE_TAG = "collector-5255f34b6f8f"
+export const RELEASE_REPO = "sandgardenhq/gloria"
+export const ASSET_PREFIX = "gloria-collector"
 export const CHECKSUMS = {
-  "darwin-arm64": "32a6f329e8ba276545151ea31879c307c936a28028dc3155a3e329d7ee3c3100",
-  "darwin-x64": "d0fc791df0fd8ff8a38179defcfa773bf8d7384cb2d664cd3d5334cd12e2525c",
-  "linux-x64": "bc25c8f51c48be3a2ab53548e12de91ab5e4557d4124099693b48f65d48087c7",
-  "linux-arm64": "4e68b9cca30695d9432f187c2f3bf1700f4057fb1b2c400074e631e16ad6cb20",
-  "windows-x64": "df74ab4b72b2eecbfb51126b59bd4d4ada39d9ed660e78a37356d6c9db0ef770",
+  "darwin-arm64": "e5efd2ddae7e25d79766547880ae20172af597017098a1223509e958c4c44311",
+  "darwin-x64": "21b463f55ea3e287129dcda2f56d734599e923275ccf0e584f95bd28f757261c",
+  "linux-x64": "642c48b48be2bfeeed9af0f1616b08c8acf7784ace8895b5fb1fe1c8943a1d98",
+  "linux-arm64": "0950327d9aa22a987ea1dddd3d735ed4cee8d0a1f428cd952f0d251593c4d75c",
+  "windows-x64": "c0f06a5e3366c4893ad0b371d26d9aa58b2ed26374f007297832b9cfb0b2d82f",
 }
-
-const RELEASE_BASE_URL = "https://github.com/sandgardenhq/gloria/releases/download"
 
 // node fetch follows redirects; GitHub release-asset downloads redirect to a
 // GitHub-owned object host. Only these final hosts may serve the binary —
@@ -89,8 +101,12 @@ export function logStubError(env, message) {
   }
 }
 
-/** Map platform/arch to the release asset. Returns null when unsupported. */
-export function resolveAsset(platform, arch) {
+/** Map platform/arch to the release asset. Returns null when unsupported.
+ *  `assetPrefix` defaults to gloria's own prefix so this function's behavior
+ *  is unchanged for any caller that doesn't pass one (matches the source
+ *  tree's un-stamped default — run() always passes deps.assetPrefix, which
+ *  a stamped copy sets explicitly). */
+export function resolveAsset(platform, arch, assetPrefix = "gloria-collector") {
   const key =
     platform === "darwin" && arch === "arm64"
       ? "darwin-arm64"
@@ -105,7 +121,7 @@ export function resolveAsset(platform, arch) {
               : null
   if (key === null) return null
   const ext = platform === "win32" ? ".exe" : ""
-  return { key, ext, assetName: `gloria-collector-${key}${ext}` }
+  return { key, ext, assetName: `${assetPrefix}-${key}${ext}` }
 }
 
 /**
@@ -162,7 +178,7 @@ async function downloadBinary(binPath, asset, deps) {
   }
   const tempPath = `${binPath}.download-${crypto.randomUUID()}`
   try {
-    const url = `${RELEASE_BASE_URL}/${deps.releaseTag}/${asset.assetName}`
+    const url = `https://github.com/${deps.releaseRepo}/releases/download/${deps.releaseTag}/${asset.assetName}`
     const response = await deps.fetchImpl(url)
     if (!response.ok) {
       logStubError(deps.env, `download of ${asset.assetName} failed: HTTP ${response.status}`)
@@ -237,8 +253,12 @@ const DOWNLOAD_TEMP_STALE_MS = 60 * 60 * 1000
 
 /** Delete cached collector binaries beyond the 2 most recent (by mtime),
  *  never the one just run, plus any stranded *.download-* temp file older
- *  than an hour. Best-effort: pruning must not fail the hook. */
-export function pruneCache(binDir, keepPath) {
+ *  than an hour. Best-effort: pruning must not fail the hook. `assetPrefix`
+ *  defaults to gloria's own prefix (matches resolveAsset's default) so a
+ *  binary cached by a DIFFERENTLY-stamped copy sharing the same ~/.gloria/bin/
+ *  directory (e.g. gloria's and Miranda's plugins both installed) is never
+ *  touched by this run's pruning. */
+export function pruneCache(binDir, keepPath, assetPrefix = "gloria-collector") {
   try {
     const entries = fs.readdirSync(binDir)
     for (const name of entries) {
@@ -253,7 +273,7 @@ export function pruneCache(binDir, keepPath) {
       }
     }
     const cached = entries
-      .filter((name) => name.startsWith("gloria-collector-") && !name.includes(".download-"))
+      .filter((name) => name.startsWith(`${assetPrefix}-`) && !name.includes(".download-"))
       .map((name) => {
         const filePath = path.join(binDir, name)
         return { filePath, mtimeMs: fs.statSync(filePath).mtimeMs }
@@ -275,6 +295,8 @@ export function defaultDeps() {
     nodeMajor: Number(process.versions.node.split(".")[0]),
     buildVersion: BUILD_VERSION,
     releaseTag: RELEASE_TAG,
+    releaseRepo: RELEASE_REPO,
+    assetPrefix: ASSET_PREFIX,
     checksums: CHECKSUMS,
     fetchImpl: globalThis.fetch,
     spawnImpl: spawn,
@@ -296,7 +318,7 @@ export async function run(argv, overrides = {}) {
     if (override !== undefined && override !== "") {
       return await execBinary(override, argv, deps)
     }
-    const asset = resolveAsset(deps.platform, deps.arch)
+    const asset = resolveAsset(deps.platform, deps.arch, deps.assetPrefix)
     if (asset === null) {
       logStubError(deps.env, `unsupported platform ${deps.platform}-${deps.arch}; skipping`)
       return 0
@@ -311,13 +333,13 @@ export async function run(argv, overrides = {}) {
       return 0
     }
     const binDir = path.join(stubGloriaHome(deps.env), "bin")
-    const binPath = path.join(binDir, `gloria-collector-${deps.buildVersion}${asset.ext}`)
+    const binPath = path.join(binDir, `${deps.assetPrefix}-${deps.buildVersion}${asset.ext}`)
     if (!fs.existsSync(binPath)) {
       const downloaded = await downloadBinary(binPath, asset, deps)
       if (!downloaded) return 0 // logged inside (or a silent lock deferral)
     }
     const code = await execBinary(binPath, argv, deps)
-    pruneCache(binDir, binPath)
+    pruneCache(binDir, binPath, deps.assetPrefix)
     return code
   } catch (error) {
     logStubError(deps.env, `unexpected: ${error?.message ?? error}`)

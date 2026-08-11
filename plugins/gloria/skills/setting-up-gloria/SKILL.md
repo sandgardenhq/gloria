@@ -110,92 +110,16 @@ If neither file exists, create `AGENTS.md` containing only the section
   repo URL). If none matches, offer to run `register_project`. Registration
   is optional — a "no" still completes setup.
 
-### 6. Offer token-usage tracking setup (optional)
-
-The gloria plugin ships hooks (Claude Code, Codex, OpenCode) that transmit
-**token usage only** (model names, token counts, timestamps, session ids, and
-a locally-minted random machine UUID — never message content, prompts, or
-code) to gloria.dev's cost tracking. Cursor's hooks are wired too but are
-currently a no-op — see the Cursor note below. They are inert until
-`~/.gloria/config.json` exists, so offer to set it up — a "no" still completes
-setup.
-
-If the user says yes:
-
-1. Call the `gloria` MCP tool **`enable_usage_tracking`** (optionally passing
-   `machineLabel`, e.g. the machine's hostname, if the user consents to
-   naming the key). It mints a write-only, org-scoped Clerk API key and
-   returns `{ apiBaseUrl, ingestToken }` plus write instructions.
-2. Write `~/.gloria/config.json` (per-machine, not per-repo) directly from
-   the tool result — merge with any existing keys in the file:
-
-   ```json
-   {
-     "apiBaseUrl": "<apiBaseUrl from the tool result>",
-     "ingestToken": "<ingestToken from the tool result>"
-   }
-   ```
-
-   **Never echo the `ingestToken` into the conversation, logs, or any other
-   file** — write it straight to the config file. The secret is shown exactly
-   once; a compromised or lost key is revoked from the Clerk organization
-   settings, and re-running the tool mints a fresh one.
-
-   Work-item cost attribution needs no config beyond this: the collector
-   resolves which gloria project a session belongs to itself, per session,
-   from that session's own `git remote` — never from a value in this file, so
-   one machine works correctly across as many gloria-registered repos as the
-   developer has checked out. The collector needs no runtime install: the
-   plugin's first hook fire downloads a compiled, checksum-verified collector
-   binary for this platform (~50 MB, once per collector release) and caches it
-   under `~/.gloria/bin/`.
-
-   **Manual fallback (MCP not connected on this machine):** any org member
-   can mint the key from a machine that _does_ have the gloria MCP server
-   connected (the credential is per-machine, so mint one per machine), or an
-   org admin can create an API key with scope `usage:ingest` for the
-   organization in Clerk and supply it the same way. Have the user write the
-   file themselves — never ask them to paste the secret into the chat.
-
-From the next Claude Code session on, the plugin's hooks report usage
-automatically — and the session-start sweep also collects **Codex and
-OpenCode** usage from this machine's local session stores, so no further
-wiring is needed when Claude Code runs here regularly.
-
-**Codex:** the Codex plugin manifest (`.codex-plugin/plugin.json`) declares
-the same `Stop`/`SessionStart` hooks Claude Code uses, pointing at the same
-collector. This should auto-wire usage collection the moment the gloria
-plugin is installed through Codex's plugin marketplace — but it has not been
-empirically confirmed against a live Codex install, so treat it as
-expected-but-unverified rather than a guarantee. As a manual fallback (or on
-a Codex-only machine that hasn't installed the plugin), point `notify` in
-`~/.codex/config.toml` at the collector download stub directly:
-
-```toml
-notify = ["node", "/path/to/plugins/gloria/collector/stub.mjs", "hook-session-start"]
-```
-
-(The collector accepts and ignores Codex's JSON argv payload.)
-
-**OpenCode:** the gloria OpenCode plugin (`.opencode/plugins/gloria.js`) wires
-`session.created` and `session.idle` to trigger the same collector sweep —
-this ships automatically with the plugin, no manual step needed.
-
-**Cursor:** the Cursor plugin wires `stop`/`sessionStart`/`sessionEnd` hooks
-too, but they call the collector's `hook-cursor` entrypoint, which is a
-**deliberate no-op**. Cursor hook payloads carry no token usage or cost data,
-and Cursor's own local session storage is unreliable for it (missing cache
-tokens, mostly-zeroed counts on current versions) — the accurate source is
-the Team/Enterprise Admin API, which has no collector adapter yet. Be honest
-about this status: Cursor sessions do not contribute usage data today, even
-though the hooks are wired.
-
-### 7. Report
+### 6. Report
 
 Summarize what changed (files created/updated, section inserted where,
-registration outcome, usage tracking configured or declined) and suggest
-committing the changes, e.g.
+registration outcome) and suggest committing the changes, e.g.
 `chore: wire gloria agent doc into instruction files`.
+
+Token-usage tracking (declaring work items, minting the collector's ingest
+credential) moved to the Miranda plugin's own `setting-up-usage-tracking`
+skill — offer that separately if the user has Miranda installed and hasn't
+set it up yet.
 
 ## Idempotency rules
 

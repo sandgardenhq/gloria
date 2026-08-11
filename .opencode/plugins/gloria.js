@@ -14,11 +14,14 @@ const skillsDir = path.resolve(__dirname, "../../skills")
 // committed under the monorepo's true root — see publish-marketplace.yml).
 // In the monorepo checkout this path does not exist, so
 // triggerCollectorSweep's existsSync guard silently no-ops during local dev.
+// #403: gloria and miranda are independent plugins that both bundle their
+// own collector stub at this same relative path — a gloria-only install
+// must still track usage.
 const collectorStubPath = path.resolve(__dirname, "../../plugins/gloria/collector/stub.mjs")
 
 // Stamped at publish time by .github/workflows/publish-marketplace.yml — the
 // source tree always reads "DEV", exactly like check-plugin-version's hook.
-const INSTALLED_VERSION = "0.3.18"
+const INSTALLED_VERSION = "0.3.19"
 const LATEST_VERSION_URL = "https://gloria.dev/api/plugin-version"
 
 // Local, dependency-free comparison for this repo's simple `x.y.z` versions
