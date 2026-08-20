@@ -42,16 +42,16 @@ import { pathToFileURL } from "node:url"
 // "miranda-collector") into its copy, so two plugins installed on the same
 // machine cache and download distinctly-named binaries under the same
 // shared ~/.gloria/bin/ directory without colliding.
-export const BUILD_VERSION = "3eb842539bd5"
-export const RELEASE_TAG = "collector-3eb842539bd5"
+export const BUILD_VERSION = "c6e45781278e"
+export const RELEASE_TAG = "collector-c6e45781278e"
 export const RELEASE_REPO = "sandgardenhq/gloria"
 export const ASSET_PREFIX = "gloria-collector"
 export const CHECKSUMS = {
-  "darwin-arm64": "50de50e6e5c5cb04583349ab802e507b45c85cf6b7b54a59c75846527b0a2b88",
-  "darwin-x64": "1ce3188045ca67a8921f88ade6d990fc2784cb91b487e244ead47350aebe5aa4",
-  "linux-x64": "a8301e5403fa0933ca4c51b38edac9cf4d5eeca37c3c1402c071e6330dfb6d34",
-  "linux-arm64": "54d19d1dfa00619c53e12994f87f421f9f1e8ca0e93876b0f88a5694a4bd6adf",
-  "windows-x64": "bac6c76cf725c3906bc623a451a0c27bf7b3949ffa3c07e1390d921a1442df3c",
+  "darwin-arm64": "4dca7ed165054b57fd149e3d7059e4237ac06468eaf58c7ed77a88837e457c20",
+  "darwin-x64": "689400f0721390e8e5fe9f8a48dfe98d540c7816c034ae76480c4c71c1e411ec",
+  "linux-x64": "a111d6ac0411f9615c99b5cdfe017a45e14ef6448e36f777e9f313a1c6db22d7",
+  "linux-arm64": "2929a82a7447c44001ca8b85bfa439249e42bda8419fee2d291c0c5612838303",
+  "windows-x64": "3069898d91c241fa82ab7860e5ee2fd29b7cadd93c5be0db19b6e46625313f13",
 }
 
 // node fetch follows redirects; GitHub release-asset downloads redirect to a
