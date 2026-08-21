@@ -10,18 +10,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const skillsDir = path.resolve(__dirname, "../../skills")
 
 // The collector download stub is shared with the Claude Code/Codex plugin,
-// staged at the published repo's plugins/gloria/collector/stub.mjs (never
+// staged at the published repo's plugins/gloria/collector/stub.sh (never
 // committed under the monorepo's true root — see publish-marketplace.yml).
 // In the monorepo checkout this path does not exist, so
 // triggerCollectorSweep's existsSync guard silently no-ops during local dev.
 // #403: gloria and miranda are independent plugins that both bundle their
 // own collector stub at this same relative path — a gloria-only install
 // must still track usage.
-const collectorStubPath = path.resolve(__dirname, "../../plugins/gloria/collector/stub.mjs")
+const collectorStubPath = path.resolve(__dirname, "../../plugins/gloria/collector/stub.sh")
 
 // Stamped at publish time by .github/workflows/publish-marketplace.yml — the
 // source tree always reads "DEV", exactly like check-plugin-version's hook.
-const INSTALLED_VERSION = "0.3.31"
+const INSTALLED_VERSION = "0.3.32"
 const LATEST_VERSION_URL = "https://gloria.dev/api/plugin-version"
 
 // Local, dependency-free comparison for this repo's simple `x.y.z` versions
@@ -74,11 +74,16 @@ export function applyGloriaConfig(config, dir = skillsDir) {
  * download a ~50 MB collector binary — so the child is detached and unref'd
  * rather than awaited, and every failure (missing stub, spawn error) is
  * swallowed: a collector bug must never block or slow an OpenCode session.
+ *
+ * The stub is POSIX sh, not node (#761) — the collector must not require a
+ * JS runtime on the host. On Windows that needs `sh` on PATH (Git for
+ * Windows' Unix tools); without it the spawn errors and is swallowed, the
+ * same silent no-op a missing `node` produced before.
  */
 export function triggerCollectorSweep(spawnImpl = spawn, stubPath = collectorStubPath) {
   try {
     if (!fs.existsSync(stubPath)) return
-    const child = spawnImpl("node", [stubPath, "hook-session-start"], {
+    const child = spawnImpl("sh", [stubPath, "hook-session-start"], {
       detached: true,
       stdio: "ignore",
     })
