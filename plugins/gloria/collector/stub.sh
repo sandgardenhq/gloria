@@ -49,15 +49,15 @@
 # copy, so two plugins installed on the same machine cache and download
 # distinctly-named binaries under the same shared state directory's bin/
 # without colliding.
-BUILD_VERSION="c699bf85a354"
-RELEASE_TAG="collector-c699bf85a354"
+BUILD_VERSION="bdc73a925c78"
+RELEASE_TAG="collector-bdc73a925c78"
 RELEASE_REPO="sandgardenhq/gloria"
 ASSET_PREFIX="gloria-collector"
-CHECKSUM_DARWIN_ARM64="ebb6302ad3b100a6ac041adcd9547cd6c6aa885cd0457a3ca6f9103d9a1eda7a"
-CHECKSUM_DARWIN_X64="9fddac20c4610864a3f867384873c893b453b2562ee260d9594531de25019185"
-CHECKSUM_LINUX_X64="143926558a23a3e652a13e62858d2748191c554d91c42efd5f5aa7b39a54b5a3"
-CHECKSUM_LINUX_ARM64="4a7b57b63f8241f6dfb113ec906fd59a6f64b905587b20b0fa0a5413ce7d65a5"
-CHECKSUM_WINDOWS_X64="086541dd9f89a10614f0b36c0c70b8df0698889cb6445aa0c06ee89f34931994"
+CHECKSUM_DARWIN_ARM64="11f237bc8947bf1f0c3f9b20e561804230b8960df8ebf5ad4e78980079370c1e"
+CHECKSUM_DARWIN_X64="29860728e7c88cc4fbbdfa9fefb67e29131ed6ae945176e037c36e4ba3756c29"
+CHECKSUM_LINUX_X64="067d822d3c6724e872f454e246d5b6a00b22c29304df8d9f630b07be866a8229"
+CHECKSUM_LINUX_ARM64="d567aa685339d1789bb9c364bdb93ce1d38cdc07bab877db54fae3a0d4d7cdb9"
+CHECKSUM_WINDOWS_X64="3a1a87a30cc8729243b5341985fbee49282c9a222cb4431f5d14bb7f4ab3d89f"
 
 # A download lock older than this is a downloader that died mid-run: take it
 # over (mirrors the collector's sweep-lock staleness cutoff).
