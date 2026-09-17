@@ -1,6 +1,6 @@
 {
   "name": "gloria",
-  "version": "0.3.58",
+  "version": "0.3.59",
   "type": "module",
   "description": "gloria.dev OpenCode plugin — dependency-discovery skills + the gloria.dev MCP server.",
   "homepage": "https://gloria.dev",
