@@ -13,7 +13,7 @@ const skillsDir = path.resolve(__dirname, "../../skills")
 // staged at the published repo's plugins/gloria/collector/stub.sh (never
 // committed under the monorepo's true root — see publish-marketplace.yml).
 // In the monorepo checkout this path does not exist, so
-// triggerCollectorSweep's existsSync guard silently no-ops during local dev.
+// spawnCollector's existsSync guard silently no-ops during local dev.
 // #403: gloria and miranda are independent plugins that both bundle their
 // own collector stub at this same relative path — a gloria-only install
 // must still track usage.
@@ -21,7 +21,7 @@ const collectorStubPath = path.resolve(__dirname, "../../plugins/gloria/collecto
 
 // Stamped at publish time by .github/workflows/publish-marketplace.yml — the
 // source tree always reads "DEV", exactly like check-plugin-version's hook.
-const INSTALLED_VERSION = "0.3.62"
+const INSTALLED_VERSION = "0.3.68"
 const LATEST_VERSION_URL = "https://gloria.dev/api/plugin-version"
 
 // Local, dependency-free comparison for this repo's simple `x.y.z` versions
@@ -66,24 +66,23 @@ export function applyGloriaConfig(config, dir = skillsDir) {
 }
 
 /**
- * Fire-and-forget trigger for the same usage-collector sweep Claude Code's
- * SessionStart hook runs (docs/plans/2026-07-08-coding-agent-token-tracking-design.md
- * §5): the collector re-scans all three local sources from their watermarks,
- * so any trigger source is safe to call repeatedly. This runs IN-PROCESS with
- * OpenCode (unlike Claude Code's spawned hook process), and a first run can
- * download a ~50 MB collector binary — so the child is detached and unref'd
- * rather than awaited, and every failure (missing stub, spawn error) is
- * swallowed: a collector bug must never block or slow an OpenCode session.
+ * Fire-and-forget call into the collector, via the download stub.
+ *
+ * This runs IN-PROCESS with OpenCode (unlike Claude Code's spawned hook
+ * process), and a first run can download a ~50 MB collector binary — so the
+ * child is detached and unref'd rather than awaited, and every failure
+ * (missing stub, spawn error) is swallowed: a collector bug must never block
+ * or slow an OpenCode session.
  *
  * The stub is POSIX sh, not node (#761) — the collector must not require a
  * JS runtime on the host. On Windows that needs `sh` on PATH (Git for
  * Windows' Unix tools); without it the spawn errors and is swallowed, the
  * same silent no-op a missing `node` produced before.
  */
-export function triggerCollectorSweep(spawnImpl = spawn, stubPath = collectorStubPath) {
+function spawnCollector(args, spawnImpl, stubPath) {
   try {
     if (!fs.existsSync(stubPath)) return
-    const child = spawnImpl("sh", [stubPath, "hook-session-start"], {
+    const child = spawnImpl("sh", [stubPath, ...args], {
       detached: true,
       stdio: "ignore",
     })
@@ -92,6 +91,34 @@ export function triggerCollectorSweep(spawnImpl = spawn, stubPath = collectorStu
   } catch {
     // Must never block or crash the session.
   }
+}
+
+/**
+ * Session start: the same `hook-session-start` entrypoint Claude Code's
+ * SessionStart hook uses. Since #847 that entrypoint does not sweep — it makes
+ * sure this machine has a collector DAEMON, installing the per-user service
+ * the first time, and the daemon's own watcher on OpenCode's storage directory
+ * is what ingests the session.
+ *
+ * OpenCode keeps its sessions in SQLite rather than in a transcript file, so
+ * there is no path a spool trigger could name; the watcher is the whole of the
+ * handoff here.
+ */
+export function startCollectorSession(spawnImpl = spawn, stubPath = collectorStubPath) {
+  spawnCollector(["hook-session-start"], spawnImpl, stubPath)
+}
+
+/**
+ * Per-turn: `daemon ensure` and nothing else.
+ *
+ * `session.idle` fires once per TURN, and the session-start entrypoint above
+ * runs a whole bootstrap — a service-registration probe (a subprocess on Linux
+ * and Windows), a config load, the nudges. That is a session-start's worth of
+ * work to pay for every turn. All this handler actually owes the collector is
+ * "is a daemon up?", which is one lock-file read when the answer is yes.
+ */
+export function ensureCollectorDaemon(spawnImpl = spawn, stubPath = collectorStubPath) {
+  spawnCollector(["daemon", "ensure"], spawnImpl, stubPath)
 }
 
 // OpenCode plugin entry. The `config` hook receives OpenCode's config singleton;
@@ -106,7 +133,7 @@ export const gloria = async ({ client, spawnImpl = spawn, stubPath = collectorSt
     applyGloriaConfig(config)
   },
   "session.created": async () => {
-    triggerCollectorSweep(spawnImpl, stubPath)
+    startCollectorSession(spawnImpl, stubPath)
     try {
       const res = await fetch(LATEST_VERSION_URL)
       if (!res.ok) return
@@ -118,9 +145,10 @@ export const gloria = async ({ client, spawnImpl = spawn, stubPath = collectorSt
     }
   },
   // Closest OpenCode analog to Claude Code's per-turn Stop hook: fires once
-  // the agent loop finishes a turn and is waiting on the user again.
+  // the agent loop finishes a turn and is waiting on the user again. Cheap on
+  // purpose — see ensureCollectorDaemon.
   "session.idle": async () => {
-    triggerCollectorSweep(spawnImpl, stubPath)
+    ensureCollectorDaemon(spawnImpl, stubPath)
   },
 })
 
