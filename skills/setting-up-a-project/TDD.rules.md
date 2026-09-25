@@ -66,39 +66,10 @@ For every production file, there MUST be a corresponding test file:
 - ✅ Build succeeds with ZERO errors
 - ✅ NO linter errors or warnings
 - ✅ Coverage meets minimum thresholds (90%+)
-- ✅ Progress documented in PROGRESS.md
 
 A task with failing tests, build errors, or linter warnings is INCOMPLETE. Period.
 
-### 8. Progress Documentation
-
-**MANDATORY RULE**: YOU MUST REPORT YOUR PROGRESS IN `PROGRESS.md`
-
-After completing EACH task:
-
-1. Create `PROGRESS.md` if it doesn't exist
-2. Document:
-   - Task completed
-   - Tests written/passed
-   - Coverage achieved
-   - Any issues encountered
-   - Timestamp
-
-Format:
-
-```markdown
-## Task X: [Name] - [COMPLETE/IN PROGRESS]
-
-- Started: [timestamp]
-- Tests: X passing, 0 failing
-- Coverage: Lines: X%, Functions: X%, Branches: X%, Statements: X%
-- Build: ✅ Successful / ❌ Failed
-- Linting: ✅ Clean / ❌ X errors
-- Completed: [timestamp]
-- Notes: [any relevant notes]
-```
-
-### 9. Git Commits - Commit Early, Commit Often
+### 8. Git Commits - Commit Early, Commit Often
 
 **MANDATORY RULE**: COMMIT EARLY, COMMIT OFTEN
 
@@ -120,7 +91,6 @@ Format:
   - Build successfully
   - Have no linter errors
   - Meet coverage requirements (if code was added)
-  - Have progress documented
   - Include clear commit message mentioning TDD
 
 - **Commit Message Format**:
@@ -210,7 +180,6 @@ Before marking ANY task complete, verify:
 5. ✓ Coverage maintained (90%+)?
 6. ✓ Build succeeds (`<build command>`)?
 7. ✓ No linter errors?
-8. ✓ Progress documented in PROGRESS.md?
 
 Missing ANY ✓ = Task is NOT complete. Fix it first.
 
