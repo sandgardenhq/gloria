@@ -1,4 +1,4 @@
-<!-- gloria-doc-version: 0.3.71 -->
+<!-- gloria-doc-version: 0.3.72 -->
 
 # Using Gloria
 
