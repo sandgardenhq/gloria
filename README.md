@@ -47,7 +47,18 @@ The plugin ships Claude Code hooks that feed gloria.dev's token cost tracking. O
 
 There is nothing to install: the first hook fire downloads a compiled collector binary for your platform (~50 MB, once per collector release) from this repo's GitHub Releases, verifies it against SHA-256 checksums pinned into the plugin at publish time, and caches it under `bin/` in the collector's state directory (`$XDG_CONFIG_HOME/sandgarden`, defaulting to `~/.config/sandgarden`). If the download can't complete (offline, unsupported platform), the hook exits silently and retries on a later session.
 
-**Privacy:** the collector transmits **token usage only** — model names, token counts, timestamps, session/request identifiers, and a random per-machine identifier (a UUID minted locally). Alongside that it reports your machine's **hostname, operating system, and architecture**, so you can tell your machines apart in the dashboard instead of reading UUIDs. Work-item cost attribution additionally reads your session's own `git remote` to resolve which gloria project it belongs to — never a value from your config. To extract those numbers it reads your local session files (which contain conversation content), but it never transmits message content, prompts, code, or file paths.
+**Privacy:** the collector transmits **token usage only** — model names, token counts, timestamps, session/request identifiers, and a random per-machine identifier (a UUID minted locally). Alongside that it reports your machine's **hostname, operating system, and architecture**, so you can tell your machines apart in the dashboard instead of reading UUIDs. Work-item cost attribution additionally reads your session's own `git remote` to resolve which gloria project it belongs to — never a value from your config. To extract those numbers it reads your local session files (which contain conversation content), but it never transmits message content, prompts, or code, and, unless workflow events are on (below), no file paths.
+
+**Workflow events — off by default.** Your organization admin can turn workflow collection on for the whole organization in Miranda's settings; until they do, the collector reports token usage exactly as described here and nothing more. When it is on, the collector also reports the **structure, not content**, of each session it already reads: sizes, names, and flags, never a prompt, a reply, a file body, a tool's output, or a full shell command (only its first word and its class). These are the event kinds:
+
+- `session_start`: branch, repository, entrypoint; the directory as a hash
+- `session_end`: why it ended and how long it ran
+- `human_turn`: prompt size and slash-command name, never the prompt
+- `assistant_turn`: model, effort, stop reason and size, never the reply
+- `model_request`: the token counts already reported today
+- `tool_call`: tool name, argument names, repo-relative file path, and a shell command's first word only
+- `tool_result`: error flag, size, exit code and test counts, never the output
+- `project_facts`: manifest and instruction file names, sizes and hashes
 
 **The hooks are inert until you configure them.** With no config present they exit 0 immediately (never interrupting your session) and log a one-line setup hint to `collector.log` in that same directory. Nothing is collected or sent.
 

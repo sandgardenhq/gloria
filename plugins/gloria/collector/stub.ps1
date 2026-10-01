@@ -45,11 +45,11 @@
 # placeholder appears exactly once so the workflow's sed + grep verification
 # can't miss. Only windows-x64 is carried: it is the only asset this file can
 # ever resolve.
-$BuildVersion = '068e288ad8c9'
-$ReleaseTag = 'collector-068e288ad8c9'
+$BuildVersion = 'c31ac6470e26'
+$ReleaseTag = 'collector-c31ac6470e26'
 $ReleaseRepo = 'sandgardenhq/gloria'
 $AssetPrefix = 'gloria-collector'
-$ChecksumWindowsX64 = '2d102e429a3dc374a8909077b6ba2230e42b6a5e50ff762a79c727f83098d0f2'
+$ChecksumWindowsX64 = 'b38709742a5ab7a618cc19b4fd562fc3fd8c1ca5a22cac1548756a25f0446e87'
 
 # A download lock older than this is a downloader that died mid-run: take it
 # over (mirrors the collector's sweep-lock staleness cutoff).
