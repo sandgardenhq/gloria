@@ -69,10 +69,11 @@ One-time setup:
 
    ```json
    {
-     "apiBaseUrl": "https://gloria.dev",
      "ingestToken": "<ingestToken from the tool result>"
    }
    ```
+
+   No base URL is needed: the collector defaults to `https://gloria.dev`.
 
    Work-item cost attribution needs nothing further: the collector resolves
    which gloria project a session belongs to itself, per session, from that
