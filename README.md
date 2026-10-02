@@ -59,6 +59,13 @@ There is nothing to install: the first hook fire downloads a compiled collector 
 - `tool_call`: tool name, argument names, repo-relative file path, and a shell command's first word only
 - `tool_result`: error flag, size, exit code and test counts, never the output
 - `project_facts`: manifest and instruction file names, sizes and hashes
+- `skill_invoked`: skill name and whether it came from a plugin, the project, or the user
+- `subagent_spawned`: subagent type, model override and whether it ran in the background, never its prompt
+- `plan_mode`: entering or leaving plan mode, never the plan
+- `compaction`: whether a context compaction was automatic or manual, and the context size before it
+- `vcs_event`: commit, push, PR create or merge, or rebase, with PR and issue numbers only, never a branch, message or remote
+- `hook_fired`: hook name and whether it blocked, never its output
+- `mcp_tool_call`: MCP server and tool name, never arguments or results
 
 **The hooks are inert until you configure them.** With no config present they exit 0 immediately (never interrupting your session) and log a one-line setup hint to `collector.log` in that same directory. Nothing is collected or sent.
 
