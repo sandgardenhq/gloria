@@ -170,6 +170,18 @@ Then ask your agent to **document the project's service dependencies**. That inv
 
 Third-party marketplaces have auto-update off by default in Claude Code — open `/plugin` → **Marketplaces** and enable auto-update for `gloria` to skip the manual step.
 
+## Uninstalling
+
+Removing the plugin does not remove the token-usage collector it downloaded, and the collector may also be running as a background service. After removing the `gloria` plugin (and the `miranda` plugin, if installed — it ships the same collector, and either one's hooks download it again at the next session), run:
+
+```sh
+miranda-collector uninstall                 # the service, binaries, state and credential
+miranda-collector uninstall --keep-config   # the same, but keep config.json for a reinstall
+sudo miranda-collector uninstall --system   # macOS, only if the Miranda .pkg was installed
+```
+
+If `miranda-collector` is not on your `PATH`, run the cached copy directly: `~/.config/sandgarden/bin/miranda-collector uninstall`. It prints every path it removed, and running it again reports nothing to remove. Deleting `config.json` does not deactivate the machine's ingest key — revoke it on [miranda.co](https://miranda.co) under **Account → Collector keys**. See the [Miranda plugin's README](https://github.com/sandgardenhq/miranda#uninstalling) for the full list of what is removed.
+
 ## Links
 
 - Website — <https://gloria.dev>
