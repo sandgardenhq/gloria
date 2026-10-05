@@ -49,15 +49,15 @@
 # copy, so two plugins installed on the same machine cache and download
 # distinctly-named binaries under the same shared state directory's bin/
 # without colliding.
-BUILD_VERSION="f8c092b60eb2"
-RELEASE_TAG="collector-f8c092b60eb2"
+BUILD_VERSION="7bac01bd1468"
+RELEASE_TAG="collector-7bac01bd1468"
 RELEASE_REPO="sandgardenhq/gloria"
 ASSET_PREFIX="gloria-collector"
-CHECKSUM_DARWIN_ARM64="9c53188e405c6f1b0d8984bc2d19a5c380d7b4e94605d2edbc57d4f6a041a6a8"
-CHECKSUM_DARWIN_X64="cf51bfbd92dbd1f9cdf74d57113c17b4600ae096adba815b8dd2d3604a00f264"
-CHECKSUM_LINUX_X64="4b68900d2018a34dce9127becca84a7c3b7090a0563dfa75e10ededc4e055087"
-CHECKSUM_LINUX_ARM64="44650111ad2318dac76a1f6073a6d7b3c9374c334aa4f046c1ef4c9d31913fc2"
-CHECKSUM_WINDOWS_X64="ae2799e25905ad0e88246fb5441807e2249af8edb12f490dd0bcbce932dd39b6"
+CHECKSUM_DARWIN_ARM64="bae2989c3abea2aae032bec444360d44231b84bf5a36128faf8011cbe03c6b15"
+CHECKSUM_DARWIN_X64="b6a262332e6a7170d5fe9aec1ba6e6760342ca85b75f5bcbb014249c1789f3c9"
+CHECKSUM_LINUX_X64="17f617361223ed36ae59b91589957684c8cadb3067d970376ed0d5699b8f66fd"
+CHECKSUM_LINUX_ARM64="b04d5226c7c59b37d2be9aeb45c7f8a2703658676965370bd355efd371df7f6e"
+CHECKSUM_WINDOWS_X64="c9510c52caeac3b04d680af0e74a89cc12e4386ccc31585b72394543f43d93c0"
 
 # A download lock older than this is a downloader that died mid-run: take it
 # over (mirrors the collector's sweep-lock staleness cutoff).
@@ -68,6 +68,14 @@ LOCK_STALE_MINUTES=10
 DOWNLOAD_TEMP_STALE_MINUTES=60
 LOG_MAX_BYTES=1048576
 CURL_MAX_SECONDS=600
+
+# What `hook-session-start` tells the agent when no collector could be handed
+# to it (#1568). The binary is the thing that is missing, so nothing downstream
+# can say so; this is the one place that can. The wording is a copy of
+# COLLECTOR_NOT_INSTALLED_NUDGE in hooks.ts (a test pins the two together) and
+# of the fallback in the Miranda plugin's hooks.json. No quote characters in the
+# text, so it needs no JSON escaping here.
+NOT_INSTALLED_NUDGE='{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The usage collector is not installed or could not be set up on this machine, so no token usage is being recorded. Tell the user now: reinstall or update the Miranda plugin and start a new session; the cause is logged in collector.log under ~/.config/sandgarden."}}'
 
 # The pre-#783 state directory, kept only as a migration source.
 LEGACY_HOME_DIR_NAME=".gloria"
@@ -199,6 +207,24 @@ sha256_of() {
   fi
 }
 
+# Print the not-installed nudge, for `hook-session-start` only — the one hook
+# whose stdout reaches the agent's context. Every other subcommand stays quiet.
+# Under `--enrolled-only` (#1566, the gloria plugin) it also stays quiet unless
+# this machine has a config.json: "reinstall the Miranda plugin" is a Miranda
+# prompt, and gloria must never show one to someone who never opted in. Only
+# existence is checked — the binary that could validate the file is the thing
+# that is missing. Always returns 0: the exit-0 contract above still holds.
+nudge_not_installed() {
+  [ "${1-}" = "hook-session-start" ] || return 0
+  for ni_arg in "$@"; do
+    if [ "$ni_arg" = "--enrolled-only" ]; then
+      [ -f "$(collector_home)/config.json" ] || return 0
+    fi
+  done
+  printf '%s\n' "$NOT_INSTALLED_NUDGE"
+  return 0
+}
+
 # Take the download lock. `mkdir` is the portable atomic create-or-fail. A LIVE
 # lock (younger than LOCK_STALE_MINUTES) returns 1 — the loser exits 0 and lets
 # the winner finish. A stale lock is taken over by rename, not by rm: exactly
@@ -259,7 +285,7 @@ migrate_cached_binary() {
 
 # Download the asset to a temp file, verify its SHA-256 against the stamped
 # checksum, then atomically rename into place. Returns 0 when $1 is ready to
-# execute; 1 (after logging, except on a silent lock deferral) otherwise. The
+# execute; 1 (after logging) otherwise, or 2 on a silent lock deferral. The
 # temp file and the lock are always cleaned up, and unverified bytes are never
 # left executable at the cache path.
 download_binary() {
@@ -271,7 +297,7 @@ download_binary() {
   fi
   db_lock="$db_dir/.download.lock"
   if ! acquire_download_lock "$db_lock"; then
-    return 1 # a concurrent session is downloading — silently defer
+    return 2 # a concurrent session is downloading — silently defer, no nudge
   fi
   db_tmp="$db_bin.download-$$-$(date -u '+%s' 2>/dev/null || printf '0')"
   db_expected="$(checksum_for "$ASSET_KEY")"
@@ -342,12 +368,14 @@ run_binary() {
   shift
   if [ ! -x "$rb_bin" ]; then
     log_error "spawn of $rb_bin failed: not executable"
+    nudge_not_installed "$@"
     return 0
   fi
   "$rb_bin" "$@"
   rb_status=$?
   if [ "$rb_status" -eq 126 ] || [ "$rb_status" -eq 127 ]; then
     log_error "spawn of $rb_bin failed: exit $rb_status"
+    nudge_not_installed "$@"
     return 0
   fi
   return "$rb_status"
@@ -414,15 +442,22 @@ main() {
 
   if ! resolve_asset; then
     log_error "unsupported platform $PLATFORM_LABEL; skipping"
+    nudge_not_installed "$@"
     exit 0
   fi
 
   m_bin_dir="$(collector_home)/bin"
   m_bin="$m_bin_dir/$ASSET_PREFIX-$BUILD_VERSION$ASSET_EXT"
   if [ ! -f "$m_bin" ]; then
-    migrate_cached_binary "$m_bin" ||
-      download_binary "$m_bin" ||
-      exit 0 # logged inside (or a silent lock deferral)
+    if ! migrate_cached_binary "$m_bin"; then
+      download_binary "$m_bin"
+      m_download=$?
+      if [ "$m_download" -ne 0 ]; then
+        # Logged inside. 2 is a lock deferral — the winner is installing it.
+        [ "$m_download" -eq 2 ] || nudge_not_installed "$@"
+        exit 0
+      fi
+    fi
   fi
   run_binary "$m_bin" "$@"
   m_status=$?

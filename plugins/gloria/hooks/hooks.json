@@ -5,8 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-stop || true",
-            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-stop }; exit 0"
+            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-stop --enrolled-only || true",
+            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-stop --enrolled-only }; exit 0"
           }
         ]
       }
@@ -16,8 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-stop || true",
-            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-stop }; exit 0"
+            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-stop --enrolled-only || true",
+            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-stop --enrolled-only }; exit 0"
           }
         ]
       }
@@ -31,8 +31,8 @@
           },
           {
             "type": "command",
-            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-session-start || true",
-            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-session-start }; exit 0"
+            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-session-start --enrolled-only || true",
+            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-session-start --enrolled-only }; exit 0"
           }
         ]
       }
@@ -43,8 +43,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-post-tool-use || true",
-            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-post-tool-use }; exit 0"
+            "command": "[ -f \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" ] && sh \"${CLAUDE_PLUGIN_ROOT}/collector/stub.sh\" hook-post-tool-use --enrolled-only || true",
+            "commandWindows": "$r = $env:CLAUDE_PLUGIN_ROOT; if (-not $r) { $r = \"${CLAUDE_PLUGIN_ROOT}\" }; if ($r -and (Test-Path \"$r\\collector\\stub.ps1\")) { & powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"$r\\collector\\stub.ps1\" hook-post-tool-use --enrolled-only }; exit 0"
           }
         ]
       }
