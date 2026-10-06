@@ -45,11 +45,11 @@
 # placeholder appears exactly once so the workflow's sed + grep verification
 # can't miss. Only windows-x64 is carried: it is the only asset this file can
 # ever resolve.
-$BuildVersion = 'aa9440a6461f'
-$ReleaseTag = 'collector-aa9440a6461f'
+$BuildVersion = '3faf870c7886'
+$ReleaseTag = 'collector-3faf870c7886'
 $ReleaseRepo = 'sandgardenhq/gloria'
 $AssetPrefix = 'gloria-collector'
-$ChecksumWindowsX64 = '703e5f99109bd7016ae5ff3fa2a4b4a40c2b70a52b787f13c31128f361ba09ed'
+$ChecksumWindowsX64 = 'b7ed0b9513b869aa0ab5a63996ae868c90130071b3b7154f6ef35181170a8a7d'
 
 # What `hook-session-start` tells the agent when no collector could be handed
 # to it (#1568) — the PowerShell twin of stub.sh's NOT_INSTALLED_NUDGE, and a
