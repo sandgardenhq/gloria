@@ -3,189 +3,85 @@
 </p>
 
 <p align="center">
-  <strong>Tools that help your agents — and humans — build the apps and write the code you want.<br>Build fearlessly; we've got the details.</strong>
+  <strong>This repo has moved to <a href="https://github.com/sandgardenhq/plugins">sandgardenhq/plugins</a>.</strong>
 </p>
 
 ---
 
-This is the plugin marketplace for **[gloria.dev](https://gloria.dev)**. One repo serves multiple coding agents — [Claude Code](https://docs.claude.com/en/docs/claude-code/plugins), [OpenAI Codex](https://developers.openai.com/codex/plugins), [OpenCode](https://opencode.ai), and [Cursor](https://cursor.com) — from a single published source. Install the `gloria` plugin and your agent gets gloria.dev's skills plus the hosted gloria.dev MCP server.
-
-**[Get started using Gloria →](#install)**
-
-## What is gloria.dev?
-
-gloria.dev keeps an agent-written codebase aligned with intent. Agents write the code; gloria.dev makes sure it's the code you want. Each tool is driven by a project's own source code — continuously comparing what was actually built against what you intended, and surfacing where the two have drifted apart — so the picture stays current as the code changes.
-
-Six tools are live today. **Canary** (dependency monitoring) discovers every internal and external dependency a project relies on, turns each one into a continuous health check, and notifies you the moment a dependency goes down, starts erroring more than usual, or gets unexpectedly expensive — _before_ your users or your vendor tell you. The **skills library** is a versioned, org-wide coding-agent skill registry with external-marketplace subscriptions and adoption tracking. **Feature Map** is a living map between how you understand a feature and the code that implements it. **Coding Standards** codifies your team's conventions as checkable rules tied to canonical snippets, and flags drift on every change. **Doc Holiday** connects to your repos, specs, tickets, and support tools to generate documentation and release notes that keep pace with what's shipped. **Find the Gaps** is a free, open-source CLI and GitHub Action that compares your code against your docs and reports exactly where they've drifted. More tools are on the way: token cost tracking, a living PRD, sub-agent management, and log debugging.
-
-## What's in the `gloria` plugin
-
-Installing the plugin gives your agent twelve skills and wires up the hosted MCP server. (Cursor's marketplace has no individual-user self-service install command yet — see its section below for the working-today local-plugin install.)
-
-| Skill                                    | What it does                                                                                                                                                                   |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`setting-up-a-project`**               | For a brand-new project with no CLAUDE.md yet: interviews it (purpose, tech stack, TDD rules, git practices), writes CLAUDE.md, then offers to chain into `setting-up-gloria`. |
-| **`setting-up-gloria`**                  | For a project that's already set up: writes the `.gloria/USING-GLORIA.md` agent playbook, adds a Gloria section to `CLAUDE.md`/`AGENTS.md`, and offers project registration.   |
-| **`documenting-service-dependencies`**   | Scans a codebase and produces dependency inventories plus copy-paste health-check definitions — the discovery step behind Canary.                                              |
-| **`identifying-skills-for-a-project`**   | Inventories the agent skills a project already uses and recommends the gaps worth filling.                                                                                     |
-| **`using-the-skills-library`**           | Drives the gloria.dev skills library: search the org library before authoring a skill, and publish reusable skills org-wide.                                                   |
-| **`extracting-coding-standards`**        | Derives rules and canonical snippets from a codebase's conventions and registers them with gloria's Coding Standards library.                                                  |
-| **`using-coding-standards`**             | Write-time discipline: finds the canonical snippet for what you're about to write, adopts or adapts it, and leaves provenance.                                                 |
-| **`checking-coding-standards`**          | Checks code against a project's registered Coding Standards — diff-scoped, metadata, or full-audit — and reports drift findings.                                               |
-| **`debugging-production-errors`**        | Investigates production errors through gloria's log tools: find the spike, group the errors, correlate with the deploy, map the stack trace to source.                         |
-| **`investigating-production-incidents`** | Wraps `debugging-production-errors` with a durable investigation folder — evidence saved to `evidence/`, findings written to `INVESTIGATION.md`.                               |
-| **`deriving-agent-code-style`**          | Turns a codebase's linter/formatter/compiler config into an imperative, agent-facing Code Style section, each rule labeled by what enforces it.                                |
-| **`mapping-packages-for-coding-agents`** | Derives a monorepo's internal dependency graph and package roles into agent-facing "put here / not here" routing guidance.                                                     |
-
-The plugin also registers the remote **gloria.dev MCP server** at `https://mcp.gloria.dev/mcp` (Streamable HTTP). The agent uses it to register discovered dependencies as health checks and query their status. The server is OAuth-protected; the first request triggers a one-time browser sign-in.
-
-> **Looking for Doc Holiday?** The `writing-doc-holiday-prompts`, `defining-the-documentation-site-map`, and `capturing-documentation-screenshots` skills moved to their own marketplace, [`sandgardenhq/doc-holiday`](https://github.com/sandgardenhq/doc-holiday). Install it with `/plugin marketplace add sandgardenhq/doc-holiday` (Claude Code) — see that repo's README for every agent.
-
-### Token-usage tracking hooks (Claude Code)
-
-The plugin ships Claude Code hooks that feed gloria.dev's token cost tracking. On `Stop`/`SessionEnd` the collector syncs the session's own transcript; on `SessionStart` it sweeps this machine's local session stores (Claude Code, Codex, and OpenCode) for anything recorded since the last sweep.
-
-There is nothing to install: the first hook fire downloads a compiled collector binary for your platform (~50 MB, once per collector release) from this repo's GitHub Releases, verifies it against SHA-256 checksums pinned into the plugin at publish time, and caches it under `bin/` in the collector's state directory (`$XDG_CONFIG_HOME/sandgarden`, defaulting to `~/.config/sandgarden`). If the download can't complete (offline, unsupported platform), the hook exits silently and retries on a later session.
-
-**Privacy:** the collector transmits **token usage only** — model names, token counts, timestamps, session/request identifiers, and a random per-machine identifier (a UUID minted locally). Alongside that it reports your machine's **hostname, operating system, and architecture**, so you can tell your machines apart in the dashboard instead of reading UUIDs. Work-item cost attribution additionally reads your session's own `git remote` to resolve which gloria project it belongs to — never a value from your config. To extract those numbers it reads your local session files (which contain conversation content), but it never transmits message content, prompts, or code, and, unless workflow events are on (below), no file paths.
-
-**Workflow events — off by default.** Your organization admin can turn workflow collection on for the whole organization in Miranda's settings; until they do, the collector reports token usage exactly as described here and nothing more. When it is on, the collector also reports the **structure, not content**, of each session it already reads: sizes, names, and flags, never a prompt, a reply, a file body, a tool's output, or a full shell command (only its first word and its class). These are the event kinds:
-
-- `session_start`: branch, repository, entrypoint; the directory as a hash
-- `session_end`: why it ended and how long it ran
-- `human_turn`: prompt size and slash-command name, never the prompt
-- `assistant_turn`: model, effort, stop reason and size, never the reply
-- `model_request`: the token counts already reported today
-- `tool_call`: tool name, argument names, repo-relative file path, and a shell command's first word only, plus the names of any wrappers a hook added to it before it ran (such as `rtk`)
-- `tool_result`: error flag, size, exit code and test counts, never the output
-- `project_facts`: manifest and instruction file names, sizes and hashes
-- `skill_invoked`: skill name and whether it came from a plugin, the project, or the user
-- `subagent_spawned`: subagent type, model override and whether it ran in the background, never its prompt
-- `plan_mode`: entering or leaving plan mode, never the plan
-- `compaction`: whether a context compaction was automatic or manual, and the context size before it
-- `vcs_event`: commit, push, PR create or merge, or rebase, with PR and issue numbers only, never a branch, message or remote
-- `hook_fired`: hook name, the first word of the hook's own command (such as `rtk`), and whether it blocked, never its arguments or output
-- `mcp_tool_call`: MCP server and tool name, never arguments or results
-
-**The hooks are inert until you configure them.** With no config present they exit 0 immediately (never interrupting your session) and log a one-line setup hint to `collector.log` in that same directory. Nothing is collected or sent.
-
-One-time setup:
-
-1. With the gloria MCP server connected, call the `enable_usage_tracking` tool (or run the `setting-up-gloria` skill, which drives it for you). It mints a write-only usage-ingest API key for your org — the secret appears once, in the tool result. Don't echo it into the chat.
-2. Create `$XDG_CONFIG_HOME/sandgarden/config.json` — `~/.config/sandgarden/config.json` when `XDG_CONFIG_HOME` is unset — from that result:
-
-   ```json
-   {
-     "ingestToken": "<ingestToken from the tool result>"
-   }
-   ```
-
-   No base URL is needed: the collector defaults to `https://gloria.dev`.
-
-   Work-item cost attribution needs nothing further: the collector resolves
-   which gloria project a session belongs to itself, per session, from that
-   session's own `git remote` — so one machine attributes correctly across
-   every gloria-registered repo you work in.
-
-From the next session on, the hooks report usage automatically. If the machine is offline, batches queue in that directory and drain on a later hook run.
-
-> **Upgrading from a release before the state directory was renamed?** The
-> collector used to keep all of this under `~/.gloria/`. Nothing to do: on its
-> next run it copies your config, machine identity, cursors, and any queued
-> batches into the new directory automatically — no re-minted credential, no
-> re-run of `enable_usage_tracking`. `~/.gloria/` is left in place.
-
-> **Also using Miranda?** The `miranda` plugin (published to
-> [`sandgardenhq/miranda`](https://github.com/sandgardenhq/miranda)) ships
-> its own copy of the same collector, its own setup skill, and a scoped MCP
-> endpoint — independent of this plugin. Installing both runs the collector
-> twice on the same machine, which is fine (redundant work, not double-counted
-> data); you don't need both just to track usage.
+The `gloria` plugin now ships from the **`sandgarden`** marketplace at **[sandgardenhq/plugins](https://github.com/sandgardenhq/plugins)**, together with gloria, miranda, and doc-holiday. This repo is no longer updated and will be archived.
 
 ## Install
 
-Pick your agent. Each command below is run from inside that agent unless noted.
+Run each command from inside the agent unless noted.
 
 ### Claude Code
 
-```bash
-/plugin marketplace add sandgardenhq/gloria
-/plugin install gloria@gloria
+```text
+/plugin marketplace add sandgardenhq/plugins
+/plugin install gloria@sandgarden
 ```
-
-The first command registers this marketplace; the second installs the `gloria` plugin (its skills plus the gloria.dev MCP server). Restart Claude Code if prompted. The first MCP call opens a one-time browser sign-in.
 
 ### OpenAI Codex
 
 ```bash
-codex plugin marketplace add sandgardenhq/gloria   # in your shell
+codex plugin marketplace add sandgardenhq/plugins   # in your shell
 ```
 
-Then, inside Codex, run `/plugins` and install **gloria**. Finally, complete the one-time OAuth handshake with the remote MCP server:
+Then, inside Codex, run `/plugins`, install `gloria`, and start a new session. Finally, complete the one-time OAuth handshake for the plugin's MCP server:
 
 ```bash
-codex mcp login gloria                             # in your shell
+codex mcp login gloria   # in your shell
 ```
-
-Codex also ships a `SessionStart` hook that nudges you when a newer gloria plugin version is available — run `/hooks` inside Codex once after installing and trust it, or the nudge never fires.
 
 ### OpenCode
 
-OpenCode has no marketplace — add gloria.dev as a plugin in your `opencode.json` (global `~/.config/opencode/opencode.json` or a project-local `opencode.json`), then restart OpenCode:
+Add the plugin to your `opencode.json`, then restart OpenCode:
 
 ```json
-{ "plugin": ["gloria@git+https://github.com/sandgardenhq/gloria.git"] }
+{ "plugin": ["@sandgarden/gloria"] }
 ```
-
-OpenCode installs the plugin, which registers gloria.dev's skills and the remote MCP server. The first MCP call opens a one-time browser sign-in. Pin a version with a git ref (`…/gloria.git#v0.2.1`).
 
 ### Cursor
 
-Cursor shipped its own plugin marketplace in February 2026 (Cursor 2.5), and this repo ships a real Cursor plugin (`.cursor-plugin/`) bundling the same skills and MCP server as the Claude/Codex plugin. Cursor has no individual-user self-service "add a marketplace repo" command yet, so clone this repo and symlink the plugin into Cursor's local plugins directory — Cursor auto-loads the bundled MCP server and skills from one manifest:
-
 ```bash
-git -C ~/.cursor/plugins/sources/gloria pull || git clone https://github.com/sandgardenhq/gloria.git ~/.cursor/plugins/sources/gloria
+git -C ~/.cursor/plugins/sources/sandgarden pull || git clone https://github.com/sandgardenhq/plugins.git ~/.cursor/plugins/sources/sandgarden
 mkdir -p ~/.cursor/plugins/local
-ln -sf ~/.cursor/plugins/sources/gloria/plugins/gloria ~/.cursor/plugins/local/gloria
+rm -rf ~/.cursor/plugins/local/gloria
+cp -R ~/.cursor/plugins/sources/sandgarden/plugins/gloria ~/.cursor/plugins/local/gloria
 ```
 
-Open Cursor's Customize sidebar → Plugins and enable **gloria** if it isn't already on. The first MCP call opens a one-time browser sign-in. The clone lives under `~/.cursor/plugins/sources/` (not `/tmp`) so the symlink survives reboots, and the command above is safe to re-run any time.
+Copy rather than symlink: Cursor does not load a symlinked local plugin (see [cursor/plugins#35](https://github.com/cursor/plugins/issues/35)). Restart Cursor or run **Developer: Reload Window**.
 
-If your org is on a Cursor Team or Enterprise plan, an admin can instead import this repo once for everyone: Dashboard → Settings → Plugins → Team Marketplaces → Import → `sandgardenhq/gloria`.
+## Already installed from this repo? Switch over
 
-## Once installed
+- **Claude Code:** remove the old `gloria` marketplace, then install from `sandgarden` as above:
 
-First, ask your agent to **set up gloria in this repo**. That invokes the `setting-up-gloria` skill, which — with your permission — writes `.gloria/USING-GLORIA.md` (the playbook that tells every coding agent when to use Gloria's tools and skills), adds a short Gloria section to your `CLAUDE.md`/`AGENTS.md` pointing at it, and offers to register the project with gloria.dev. Re-run it after plugin updates to refresh the playbook.
+  ```text
+  /plugin marketplace remove gloria
+  ```
 
-Then ask your agent to **document the project's service dependencies**. That invokes the `documenting-service-dependencies` skill, which produces the inventory and health-check definitions, then registers the resulting checks through the gloria.dev MCP server. From there, Canary runs the checks on a schedule and alerts you when a dependency drifts.
+- **OpenAI Codex:** remove the old `gloria` marketplace, then install from `sandgarden` as above:
 
-## Updating
+  ```bash
+  codex plugin marketplace remove gloria   # in your shell
+  ```
 
-| Agent        | Command                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| Claude Code  | `/plugin marketplace update gloria` then `/reload-plugins`                                                               |
-| OpenAI Codex | `codex plugin marketplace upgrade gloria` (restart Codex)                                                                |
-| OpenCode     | `rm -rf ~/.cache/opencode/node_modules/gloria` and restart                                                               |
-| Cursor       | `git -C ~/.cursor/plugins/sources/gloria pull` — the symlink and Cursor's plugin loader pick up the change automatically |
+- **OpenCode:** in `opencode.json`, replace `gloria@git+https://github.com/sandgardenhq/gloria.git` with `@sandgarden/gloria`, clear OpenCode's plugin cache, and restart OpenCode:
 
-Third-party marketplaces have auto-update off by default in Claude Code — open `/plugin` → **Marketplaces** and enable auto-update for `gloria` to skip the manual step.
+  ```bash
+  rm -rf ~/.cache/opencode/node_modules
+  ```
 
-## Uninstalling
+- **Cursor:** delete the old symlink or copy and the old clone, then follow the [Cursor install steps](#cursor):
 
-Removing the plugin does not remove the token-usage collector it downloaded, and the collector may also be running as a background service. After removing the `gloria` plugin (and the `miranda` plugin, if installed — it ships the same collector, and either one's hooks download it again at the next session), run:
+  ```bash
+  rm -rf ~/.cursor/plugins/local/gloria ~/.cursor/plugins/sources/gloria
+  ```
 
-```sh
-miranda-collector uninstall                 # the service, binaries, state and credential
-miranda-collector uninstall --keep-config   # the same, but keep config.json for a reinstall
-sudo miranda-collector uninstall --system   # macOS, only if the Miranda .pkg was installed
-```
+## Learn more
 
-If `miranda-collector` is not on your `PATH`, run the cached copy directly: `~/.config/sandgarden/bin/miranda-collector uninstall`. It prints every path it removed, and running it again reports nothing to remove. Deleting `config.json` does not deactivate the machine's ingest key — revoke it on [miranda.co](https://miranda.co) under **Account → Collector keys**. See the [Miranda plugin's README](https://github.com/sandgardenhq/miranda#uninstalling) for the full list of what is removed.
-
-## Links
-
-- Website — <https://gloria.dev>
-- MCP server — <https://mcp.gloria.dev/mcp>
+- Full install guide, for every agent and plugin: <https://github.com/sandgardenhq/plugins#readme>
+- gloria.dev: <https://gloria.dev>
 
 ---
 
